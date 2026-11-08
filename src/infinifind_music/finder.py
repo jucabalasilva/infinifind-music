@@ -82,10 +82,11 @@ def read_csv(path):
         cols = detect_columns(reader.fieldnames or [])
         songs = []
         for row in reader:
-            artists = [(row.get(c) or "").strip() for c in cols["artists"]]
+            artists = [a for a in ((row.get(c) or "").strip() for c in cols["artists"]) if a]
             songs.append({
                 "title": (row.get(cols["title"]) or "").strip() if cols["title"] else "",
-                "artist": ", ".join(a for a in artists if a),
+                "artist": ", ".join(artists),
+                "artists": artists,
                 "album": (row.get(cols["album"]) or "").strip() if cols["album"] else "",
                 "id": (row.get(cols["id"]) or "").strip() if cols["id"] else "",
             })
@@ -117,13 +118,84 @@ def fetch_json(url):
     return json.loads(out.stdout.decode("utf-8"))
 
 
-# "(Official Video)", "[Lyrics]", "(4K Remaster)"... removed from YouTube titles.
-NOISE_IN_TITLE = re.compile(
-    r"\s*[\(\[][^\)\]]*"
-    r"(official|oficial|video|vídeo|clipe|lyric|letra|audio|áudio|remaster|4k|hd)"
-    r"[^\)\]]*[\)\]]",
+# Words that mark a bracketed part of a YouTube title as noise, e.g. "(Official Video)",
+# "[Lyrics]", "(4K Remaster)", "[EPIC METAL COVER]", "(Legendado PT-BR)", "[AMV]", "(OP 4)".
+_NOISE_WORDS = (
+    r"official|oficial|video|vídeo|clipe|lyrics?|letra|audio|áudio|remaster(?:ed)?|4k|hd|"
+    r"1080p|720p|full|legendad[oa]|subtitulad[oa]|(?:viet|eng)?sub(?:s|bed|titles)?|amv|cover|"
+    r"tv[ -]?size|opening|ending|abertura|encerramento|apertura|mv|pv|pt[ -]?br|"
+    r"OP\s*\d+|ED\s*\d+"
+)
+NOISE_IN_TITLE = re.compile(r"\s*[\(\[][^\)\]]*\b(?:" + _NOISE_WORDS + r")\b[^\)\]]*[\)\]]", re.IGNORECASE)
+# 【...】 blocks are almost always notes like 【Legendado PT-BR】 or 【Golden Wind OP 2】.
+LENTICULAR_BRACKETS = re.compile(r"\s*【[^】]*】\s*")
+# "Opening 4", "OP 2", "ED3"... outside brackets: they separate the anime name from the song.
+ANIME_MARKER = re.compile(
+    r"\b(?:(?:opening|ending|abertura|encerramento|apertura)(?:\s*\d+)?|(?:OP|ED)\s*\d+)\b",
     re.IGNORECASE,
 )
+# Other loose noise outside brackets.
+LOOSE_NOISE = re.compile(
+    r"\b(?:full(?:\s+(?:version|size))?|tv[ -]?size|hd|4k|lyrics?|"
+    r"em\s+portugu[eê]s|in\s+english|(?:english|portuguese|spanish)\s+(?:version|ver\.?))\b"
+    r"|\b(?:english\s+)?cover\s+by\b.*$",
+    re.IGNORECASE,
+)
+SEPARATOR = re.compile(r"\s+[-–—|]\s+|\s*~\s*")
+_PLACEHOLDER = "\x00"
+
+
+def _split_outside_brackets(text):
+    """Splits "A - B - C" on separators, ignoring separators inside (...) or [...]."""
+    protected = re.sub(r"[\(\[][^\)\]]*[\)\]]", lambda m: m.group(0).replace("-", _PLACEHOLDER), text)
+    parts = [p.replace(_PLACEHOLDER, "-") for p in SEPARATOR.split(protected)]
+    # Quotes around song names ("I Wish") only get in the way of store searches.
+    parts = [re.sub(r"\s{2,}", " ", p.replace('"', "")).strip(" -–—|~") for p in parts]
+    return [p for p in parts if p]
+
+
+def clean_youtube_title(title, author):
+    """Turns a YouTube video title and channel into {"title", "artist", "album"} for searching.
+
+    - Official channels ("Artist - Topic", "...VEVO") keep the channel as the artist.
+    - "Anime - Opening 5 - Song" becomes title "Song" with "Anime" as the album (the uploader
+      is usually a fan, not the artist, so the artist is left empty).
+    - Other "Artist - Song" titles are split into artist and song.
+    The video link never changes: it comes from the video ID, not from the title.
+    """
+    title = unicodedata.normalize("NFKC", title)  # "ＴＩＭ　ＭＡＩＡ" -> "TIM MAIA"
+    author = unicodedata.normalize("NFKC", author)
+    official = author.endswith(" - Topic") or "vevo" in author.lower()
+    artist = author[:-8] if author.endswith(" - Topic") else author
+    if "vevo" in artist.lower():
+        artist = re.sub(r"vevo$", "", artist, flags=re.IGNORECASE).strip()
+
+    text = LENTICULAR_BRACKETS.sub(" - ", title)
+    text = NOISE_IN_TITLE.sub("", text)
+    is_anime = bool(ANIME_MARKER.search(title))
+    text = ANIME_MARKER.sub(" - ", text)
+    text = LOOSE_NOISE.sub("", text)
+    text = text.replace("「", " ").replace("」", " ")
+    parts = _split_outside_brackets(text)
+    if not parts:
+        return {"title": title.strip(), "artist": artist, "album": ""}
+    if len(parts) == 1 and re.fullmatch(r"\(([^()]*)\)", parts[0]):
+        parts = [parts[0][1:-1]]
+
+    if official:
+        # "Artist - Song" on an official channel: drop the repeated artist name.
+        # VEVO channels drop the spaces ("SomeArtistVEVO" vs. "Some Artist - Song").
+        if len(parts) > 1 and normalize(parts[0]).replace(" ", "") == normalize(artist).replace(" ", ""):
+            parts = parts[1:]
+        return {"title": " - ".join(parts), "artist": artist, "album": ""}
+    if is_anime and len(parts) > 1:
+        song = parts[-1]
+        if re.fullmatch(r"\(([^()]*)\)", song):
+            song = song[1:-1]
+        return {"title": song, "artist": "", "album": " - ".join(parts[:-1])}
+    if len(parts) > 1:
+        return {"title": " - ".join(parts[1:]), "artist": parts[0], "album": ""}
+    return {"title": parts[0], "artist": artist, "album": ""}
 
 
 def fill_from_youtube(song):
@@ -134,21 +206,26 @@ def fill_from_youtube(song):
         data = fetch_json(url)
     except Exception:
         return
-    title = data.get("title", "")
-    author = data.get("author_name", "")
-    author = author[:-8] if author.endswith(" - Topic") else author
-    # "Artist - Song (Official Video)" -> "Song"
-    if author and normalize(title).startswith(normalize(author) + " - "):
-        title = title[len(author) + 3:]
-    title = NOISE_IN_TITLE.sub("", title).strip()
-    song["title"] = title
-    song["artist"] = author
+    song.update(clean_youtube_title(data.get("title", ""), data.get("author_name", "")))
+
+
+def main_artist(song):
+    """First credited artist. Takeout lists every musician of a track, which breaks store searches.
+    Names that contain a comma ("Fear, and Loathing in Las Vegas") stay whole."""
+    artists = song.get("artists")
+    if artists:
+        return artists[0]
+    return song["artist"].strip()
+
+
+def search_term(song):
+    """Text used to search the stores: main artist + song title."""
+    return f"{main_artist(song)} {song['title']}".strip()
 
 
 def search_itunes(song, country, lang):
-    term = f'{song["artist"]} {song["title"]}'.strip()
     url = "https://itunes.apple.com/search?" + urllib.parse.urlencode(
-        {"term": term, "entity": "song", "limit": 10, "country": country})
+        {"term": search_term(song), "entity": "song", "limit": 10, "country": country})
     artists = [normalize(a) for a in song["artist"].split(",") if a.strip()]
     for attempt in range(3):
         try:
@@ -179,16 +256,17 @@ def youtube_links(song, lang):
             "YouTube Music": f"https://music.youtube.com/watch?v={song['id']}",
             "YouTube": f"https://www.youtube.com/watch?v={song['id']}",
         }
-    q = urllib.parse.quote(f'{song["artist"]} {song["title"]}'.strip())
+    q = urllib.parse.quote(search_term(song))
     return {i18n.t(lang, "search_ytm"): f"https://music.youtube.com/search?q={q}"}
 
 
 def search_links(song, lang, youtube_only=False):
     if youtube_only:
         return youtube_links(song, lang)
-    q = urllib.parse.quote(f'{song["artist"]} {song["title"]}'.strip())
+    q = urllib.parse.quote(search_term(song))
     links = {
-        "Bandcamp": f"https://bandcamp.com/search?q={q}&item_type=t",
+        # No item_type filter: Bandcamp then also shows artist pages and albums.
+        "Bandcamp": f"https://bandcamp.com/search?q={q}",
         "Amazon Music": f"https://{i18n.AMAZON[lang]}/search/{q}",
         "Deezer": f"https://www.deezer.com/search/{q}",
         "Spotify": f"https://open.spotify.com/search/{q}",

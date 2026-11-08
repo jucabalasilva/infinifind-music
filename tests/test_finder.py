@@ -8,6 +8,46 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 EXAMPLES = os.path.join(ROOT, "examples")
 
 
+def clean(title, author):
+    c = finder.clean_youtube_title(title, author)
+    return c["title"], c["artist"], c["album"]
+
+
+def test_clean_title_from_official_channel():
+    assert clean("Song Name (Official Video) (4K Remaster)", "Some Artist - Topic") == (
+        "Song Name", "Some Artist", "")
+    assert clean("Some Artist - Song Name [Lyrics]", "SomeArtistVEVO") == ("Song Name", "SomeArtist", "")
+
+
+def test_clean_title_from_anime_fan_upload():
+    # "Show - Opening N - Song": the uploader is not the artist; the show becomes the album.
+    assert clean("My Show Opening 5 FULL - Song Name", "fan channel") == ("Song Name", "", "My Show")
+    assert clean("My Show - Opening 4 (Song Name) - Full - 【Legendado PT-BR】", "fan") == (
+        "Song Name", "", "My Show")
+    assert clean("My Show OP 2 [FULL] Song Name", "fan") == ("Song Name", "", "My Show")
+
+
+def test_clean_title_keeps_brackets_and_fixes_width_and_quotes():
+    title, artist, _ = clean("Song (Mashup - A, B, C)", "Uploader")
+    assert (title, artist) == ("Song (Mashup - A, B, C)", "Uploader")
+    assert clean("ＡＢＣ - ＳＯＮＧ", "x")[:2] == ("SONG", "ABC")
+    assert clean('Show: "Song" OPENING 10', "x")[0] == "Show: Song"
+    assert clean("Song Name【Show OP 2】ENGLISH COVER by Someone", "Someone")[:2] == ("Song Name", "Someone")
+
+
+def test_store_search_uses_main_artist_only():
+    song = {"title": "Track", "artist": "Band, Singer, Drummer", "artists": ["Band", "Singer", "Drummer"],
+            "album": "", "id": "abcdefghijk"}
+    assert finder.search_term(song) == "Band Track"
+    # A band name that contains a comma stays whole when it comes from a single field.
+    assert finder.search_term({"title": "T", "artist": "Fear, and Loathing", "album": "", "id": ""}) == (
+        "Fear, and Loathing T")
+    links = finder.search_links(song, "en-US")
+    assert links["Bandcamp"] == "https://bandcamp.com/search?q=Band%20Track"
+    # The video link comes from the ID, never from the title.
+    assert links["YouTube Music"] == "https://music.youtube.com/watch?v=abcdefghijk"
+
+
 def test_detect_columns_in_three_languages():
     pt = finder.detect_columns(["ID do vídeo", "Song Title", "Album Title", "Artist Name 1", "Artist Name 2"])
     assert pt["id"] == "ID do vídeo" and pt["title"] == "Song Title"
