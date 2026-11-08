@@ -1,0 +1,27 @@
+# Python environment and build artifacts
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+
+# Generated results and caches (they contain the user's music library)
+cache/
+*.cache.json
+*.html
+!ui.html
+*.txt
+
+# Personal data exported from Google Takeout (never commit)
+Takeout/
+takeout-*.zip
+
+# Claude Code notes and local settings (kept local)
+CLAUDE.md
+CLAUDE.local.md
+.claude/settings.local.json
+
+# OS
+.DS_Store

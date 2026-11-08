@@ -1,0 +1,8 @@
+# GitHub Dependabot: opens a pull request when a dependency in pyproject.toml has an update
+# (including security fixes), and alerts about known vulnerabilities.
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"

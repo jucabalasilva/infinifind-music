@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- InfiniFind Music icon (original artwork): glossy red vinyl record + glass magnifier
+       with a play symbol. Transparent background. Not affiliated with or based on any
+       YouTube / YouTube Music logo. -->
+  <defs>
+    <radialGradient id="vinyl" cx=".5" cy=".42" r=".6">
+      <stop offset="0" stop-color="#ff4a3d"/><stop offset=".55" stop-color="#d9140f"/><stop offset="1" stop-color="#7d0606"/>
+    </radialGradient>
+    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity=".75"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="label" cx=".4" cy=".35" r=".7">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e3e9ef"/>
+    </radialGradient>
+    <radialGradient id="lens" cx=".4" cy=".35" r=".75">
+      <stop offset="0" stop-color="#e9fbff" stop-opacity=".95"/><stop offset=".55" stop-color="#8fdcff" stop-opacity=".8"/>
+      <stop offset="1" stop-color="#1a8fe0" stop-opacity=".92"/>
+    </radialGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f4f8fb"/><stop offset=".5" stop-color="#9fb3c4"/><stop offset="1" stop-color="#5d7488"/>
+    </linearGradient>
+    <linearGradient id="handle" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#3d4a57"/><stop offset=".45" stop-color="#8a9aab"/><stop offset="1" stop-color="#2b3540"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#2a0000" flood-opacity=".35"/>
+    </filter>
+    <clipPath id="disc"><circle cx="440" cy="440" r="340"/></clipPath>
+  </defs>
+
+  <!-- Red vinyl record -->
+  <g filter="url(#shadow)"><circle cx="440" cy="440" r="340" fill="url(#vinyl)"/></g>
+  <g fill="none" stroke="#5a0000" stroke-opacity=".28" stroke-width="3">
+    <circle cx="440" cy="440" r="310"/><circle cx="440" cy="440" r="285"/><circle cx="440" cy="440" r="262"/>
+    <circle cx="440" cy="440" r="240"/><circle cx="440" cy="440" r="218"/><circle cx="440" cy="440" r="196"/>
+    <circle cx="440" cy="440" r="175"/>
+  </g>
+  <!-- light reflections on the grooves -->
+  <g clip-path="url(#disc)" opacity=".5">
+    <path d="M440 440 L170 180 A380 380 0 0 1 300 110 Z" fill="#fff" opacity=".35"/>
+    <path d="M440 440 L710 700 A380 380 0 0 1 580 770 Z" fill="#fff" opacity=".18"/>
+  </g>
+  <!-- center label with a music note -->
+  <circle cx="440" cy="440" r="130" fill="url(#label)"/>
+  <circle cx="440" cy="440" r="130" fill="none" stroke="#b30d0d" stroke-opacity=".35" stroke-width="4"/>
+  <path fill="#d9140f" d="M418 362v118a40 40 0 1 0 26 37V412h62v-50z"/>
+  <!-- glossy highlight over the whole disc -->
+  <g clip-path="url(#disc)"><ellipse cx="440" cy="235" rx="300" ry="150" fill="url(#gloss)"/></g>
+  <circle cx="440" cy="440" r="340" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="5"/>
+
+  <!-- Magnifier with a play symbol -->
+  <g filter="url(#shadow)">
+    <rect x="770" y="740" width="80" height="230" rx="40" fill="url(#handle)" transform="rotate(-45 810 855)"/>
+    <circle cx="690" cy="690" r="170" fill="url(#rim)"/>
+  </g>
+  <circle cx="690" cy="690" r="138" fill="url(#lens)"/>
+  <path d="M655 625 L655 755 L760 690 Z" fill="#fff" stroke="#fff" stroke-width="18" stroke-linejoin="round"/>
+  <ellipse cx="655" cy="630" rx="90" ry="48" fill="#fff" opacity=".55" transform="rotate(-30 655 630)"/>
+  <circle cx="690" cy="690" r="138" fill="none" stroke="#fff" stroke-opacity=".75" stroke-width="5"/>
+</svg>

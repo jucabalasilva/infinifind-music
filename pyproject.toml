@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "infinifind-music"
+dynamic = ["version"]
+description = "Organize the library you exported from YouTube Music: find where to buy or stream your songs legally and keep a clean list of links."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.9"
+keywords = ["youtube music", "google takeout", "music library", "playlists"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Environment :: Web Environment",
+    "Natural Language :: English",
+    "Natural Language :: Portuguese (Brazilian)",
+    "Natural Language :: Spanish",
+    "Topic :: Multimedia :: Sound/Audio",
+]
+# The core tools use only the Python standard library.
+dependencies = []
+
+[project.optional-dependencies]
+# Desktop window. Pinned on purpose: upgrade after testing.
+app = ["pywebview==6.2.1"]
+dev = ["pytest>=8", "ruff>=0.15"]
+
+[project.scripts]
+infinifind = "infinifind_music.app:main"
+infinifind-web = "infinifind_music.server:main"
+infinifind-find = "infinifind_music.finder:main"
+infinifind-check = "infinifind_music.availability:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "infinifind_music.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+infinifind_music = ["web/*.html", "assets/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py39"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+# E/W pycodestyle, F pyflakes, I import order, B bugbear, UP pyupgrade,
+# S security (flake8-bandit), SIM simplifications, RUF ruff-specific rules.
+select = ["E", "W", "F", "I", "B", "UP", "S", "SIM", "RUF"]
+ignore = [
+    "S603",    # subprocess without shell: reviewed, commands are argument lists (see SECURITY.md)
+    "RUF001",  # typographic characters (–, …) are intentional in user-facing text
+    "RUF002",
+    "RUF003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "S310"]  # asserts and local test HTTP requests are expected in tests
