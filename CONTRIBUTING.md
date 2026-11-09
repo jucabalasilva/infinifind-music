@@ -22,12 +22,16 @@ The project follows the [PyPA](https://packaging.python.org/) recommendations: a
 | Path | What it is |
 |---|---|
 | `pyproject.toml` | Metadata, dependencies (`app` and `dev` extras) and the `infinifind*` commands. |
-| `src/infinifind_music/finder.py` | Reads the Takeout CSV and builds the HTML page (and the `.txt` list in `--youtube-only` mode). |
+| `src/infinifind_music/finder.py` | Reads the Takeout CSV and builds the HTML page, the `.txt` link list and `_unavailable.txt` (availability check on by default). |
 | `src/infinifind_music/availability.py` | Checks each link in a `.txt` list and moves unavailable ones to `<list>_unavailable.txt`. |
 | `src/infinifind_music/i18n.py` | Translations for the command line and the generated pages. |
-| `src/infinifind_music/paths.py` | Downloads, cache and app-data folders for each operating system. |
+| `src/infinifind_music/paths.py` | Downloads, cache, app-data folders and `settings.json` (chosen output folder). |
+| `src/infinifind_music/youtube_auth.py` | Google sign-in (OAuth 2.0 + PKCE, `youtube.readonly`), token refresh, keychain, sign-out. |
+| `src/infinifind_music/youtube_api.py` | Lists the user's playlists (and liked videos) and their videos via the YouTube Data API. |
+| `src/infinifind_music/net.py` | HTTPS requests with secrets (no curl fallback; system CA bundle when Python has none). |
+| `src/infinifind_music/picker.py` | Native "choose file / folder" dialogs (pywebview, AppleScript or tkinter). |
 | `src/infinifind_music/server.py` | Local server behind the interface; runs the tools and reports progress. |
-| `src/infinifind_music/web/ui.html` | The interface (Frutiger Aero style, light/dark themes, translations in `STRINGS`). |
+| `src/infinifind_music/web/ui.html` | The interface (Frutiger Aero style; animated day/night scene drawn with CSS/SVG, no external images; translations in `STRINGS`). |
 | `src/infinifind_music/app.py` | Desktop app: runs the server and shows the interface in a native window (pywebview). |
 | `src/infinifind_music/assets/` | App icon: `icon.svg` is the source; `icon.png` and `icon.icns` are generated from it. |
 | `scripts/` | `build_macos_app.sh` builds `InfiniFind Music.app`; the `.command` file opens it from Finder. |
@@ -45,7 +49,8 @@ The project follows the [PyPA](https://packaging.python.org/) recommendations: a
 - Code, comments and docs are in English. User-facing text must exist in all supported
   languages (`en-US`, `pt-BR`, `es`): add it to `i18n.py` and/or to `STRINGS` in `ui.html`.
   `tests/test_i18n.py` fails if a translation is missing.
-- Generated files go to `~/Downloads`; ask before overwriting.
+- Generated files go to the output folder (`paths.output_dir()`: the folder the user picked, or
+  `~/Downloads`); ask before overwriting. Never accept a write path that didn't come from the dialog.
 - Caches and app data go to the folders in `paths.py`, never inside the project.
 - The project helps people find music legally. Do not add features that download audio from
   YouTube or bypass any protection.
@@ -63,7 +68,9 @@ Before opening a pull request that touches the server or the interface, check:
 - [ ] New dependency? Only if essential; pin the version in `pyproject.toml`.
 - [ ] New external service? Document in the README what is sent (privacy).
 - [ ] Writes to Downloads? Confirm before overwriting.
-- [ ] Add or update tests in `tests/test_server.py` for the protections you touched.
+- [ ] Add or update tests in `tests/test_server.py` / `tests/test_auth.py` for the protections you touched.
+- [ ] Touches Google sign-in? Never return, log or write tokens; keep only `youtube.readonly`;
+      simulate Google in tests (`tests/test_auth.py` shows how), never call the real API.
 - [ ] `ruff check .` passes (it includes the `S` security rules).
 
 See [SECURITY.md](SECURITY.md) for the protections already in place.

@@ -26,6 +26,10 @@ from . import i18n, paths
 USER_AGENT = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 15_0) AppleWebKit/605.1.15 "
               "(KHTML, like Gecko) Version/18.0 Safari/605.1.15")
 MACHINE = os.environ.get("INFINIFIND_MACHINE") == "1"
+# "playabilityStatus" values that mean the video does not play here. Anything else (OK,
+# LOGIN_REQUIRED for age-restricted videos, a failed lookup) keeps the link.
+# PRIVATE_OR_DELETED and BLOCKED (country) come from the official API (youtube_api).
+UNAVAILABLE = ("UNPLAYABLE", "ERROR", "PRIVATE_OR_DELETED", "BLOCKED")
 
 
 def video_status(video_id, lang):
@@ -64,7 +68,7 @@ def main():
         status, reason = video_status(vid.group(1), lang) if vid else ("NO_ID", "")
         print(f"[{i}/{len(lines)}] {status} {reason} | {line[:70]}", flush=True)
         # When in doubt (lookup failed, age restriction), keep the link.
-        (removed if status in ("UNPLAYABLE", "ERROR") else ok).append(line)
+        (removed if status in UNAVAILABLE else ok).append(line)
         time.sleep(1)
 
     unavailable = os.path.splitext(path)[0] + "_unavailable.txt"

@@ -17,7 +17,7 @@ import sys
 import threading
 from http.server import ThreadingHTTPServer
 
-from . import paths, server
+from . import paths, picker, server
 
 NAME = "InfiniFind Music"
 ICON = os.path.join(paths.ASSETS_DIR, "icon.png")
@@ -60,6 +60,20 @@ def main():
         background_color="#49b6f2",
     )
     window.events.closed += server.task.stop  # closing the app stops any running task
+
+    def native_dialog(kind, start_dir):
+        """Native open/folder dialog of the app window (see picker.py)."""
+        if kind == "folder":
+            result = window.create_file_dialog(webview.FileDialog.FOLDER, directory=start_dir)
+        else:
+            types = {"csv": ("CSV (*.csv)",), "client": ("JSON (*.json)",)}[kind]
+            result = window.create_file_dialog(webview.FileDialog.OPEN, directory=start_dir,
+                                               file_types=types)
+        if not result:
+            return None
+        return result[0] if isinstance(result, (list, tuple)) else result
+
+    picker.set_native(native_dialog)
 
     # private_mode=False + storage_path: remembers the chosen theme and language.
     webview.start(private_mode=False, storage_path=paths.data_dir())
