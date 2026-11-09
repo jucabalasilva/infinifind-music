@@ -19,13 +19,23 @@
 <style>
 /* ---------- Light theme: daytime sky ---------- */
 :root {
-  --sky: radial-gradient(ellipse 60% 40% at 80% 8%, rgba(255,255,255,.75), transparent 60%),
-         linear-gradient(180deg, #0a6fc2 0%, #49b6f2 38%, #bfe9ff 72%, #e9f8ff 100%);
-  --grass-1: #7fd13b;
-  --grass-2: #2f9a1e;
-  --hill-shine: rgba(255,255,255,.45);
+  --sky: radial-gradient(ellipse 70% 45% at 84% 10%, rgba(255,246,214,.55), transparent 60%),
+         linear-gradient(180deg, #0a57b0 0%, #1f7fd8 18%, #4aa8ee 38%, #8ccdf6 58%, #c4e8fb 74%,
+                         #e6f6fd 86%, #f4fbf4 100%);
+  --sun: 1;
+  --moon: 0;
   --stars: 0;
+  --milky: 0;
   --aurora: 0;
+  --cloud-1: rgba(255,255,255,.97);
+  --cloud-2: rgba(236,246,255,.92);
+  --cloud-shade: rgba(150,180,215,.55);
+  --cloud-opacity: .95;
+  --far-1: #a8dcc0; --far-2: #7cc39b;
+  --mid-1: #86d95a; --mid-2: #3f9f2e;
+  --front-1: #9be640; --front-2: #2b8a1d;
+  --hill-rim: rgba(255,255,226,.85);
+  --grass-texture: .32;
 
   --text: #0c2a43;
   --text-soft: #3f6580;
@@ -74,13 +84,23 @@
 
 /* ---------- Dark theme: night sky with aurora ---------- */
 :root[data-theme="dark"] {
-  --sky: radial-gradient(ellipse 50% 35% at 78% 10%, rgba(120,200,255,.18), transparent 60%),
-         linear-gradient(180deg, #020b1f 0%, #06244a 40%, #0b3d6b 72%, #10507d 100%);
-  --grass-1: #1f7a4a;
-  --grass-2: #073b2a;
-  --hill-shine: rgba(120,255,200,.18);
+  --sky: radial-gradient(ellipse 55% 40% at 84% 12%, rgba(150,180,255,.22), transparent 60%),
+         linear-gradient(180deg, #01040f 0%, #030c24 22%, #071a3f 48%, #0d2c5c 72%, #173f73 90%,
+                         #1f4f80 100%);
+  --sun: 0;
+  --moon: 1;
   --stars: 1;
-  --aurora: 1;
+  --milky: 1;
+  --aurora: .9;
+  --cloud-1: rgba(150,172,210,.34);
+  --cloud-2: rgba(95,118,165,.28);
+  --cloud-shade: rgba(20,32,70,.3);
+  --cloud-opacity: .6;
+  --far-1: #1d4660; --far-2: #12304a;
+  --mid-1: #1c5a4a; --mid-2: #0b3329;
+  --front-1: #22683f; --front-2: #052417;
+  --hill-rim: rgba(205,225,255,.55);
+  --grass-texture: .45;
 
   --text: #e3f3ff;
   --text-soft: #9cc3dd;
@@ -135,49 +155,95 @@ body {
   transition: color .4s;
 }
 
-/* Stars and aurora (visible only in the dark theme) */
-.stars, .aurora { position: fixed; inset: 0; pointer-events: none; z-index: 0; transition: opacity .6s; }
-.stars {
-  opacity: var(--stars);
-  background-image:
-    radial-gradient(1.5px 1.5px at 8% 12%, #fff, transparent),
-    radial-gradient(1px 1px at 22% 30%, #cfefff, transparent),
-    radial-gradient(1.5px 1.5px at 35% 8%, #fff, transparent),
-    radial-gradient(1px 1px at 48% 22%, #fff, transparent),
-    radial-gradient(2px 2px at 62% 6%, #e6f7ff, transparent),
-    radial-gradient(1px 1px at 71% 28%, #fff, transparent),
-    radial-gradient(1.5px 1.5px at 86% 16%, #fff, transparent),
-    radial-gradient(1px 1px at 93% 36%, #cfefff, transparent),
-    radial-gradient(1px 1px at 14% 44%, #fff, transparent),
-    radial-gradient(1.5px 1.5px at 56% 40%, #fff, transparent),
-    radial-gradient(1px 1px at 78% 48%, #fff, transparent),
-    radial-gradient(1px 1px at 30% 52%, #cfefff, transparent);
-  animation: twinkle 5s ease-in-out infinite alternate;
-}
-@keyframes twinkle { from { filter: brightness(.7); } to { filter: brightness(1.2); } }
-.aurora {
-  opacity: calc(var(--aurora) * .55);
+/* ---------- Scene: sky, stars, sun/moon, clouds and hills (behind everything) ---------- */
+.scene { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.scene > * { position: absolute; transition: opacity .8s ease; }
+
+/* Milky Way and stars (night) */
+.milky {
+  inset: -10% -20% 30% -20%; opacity: calc(var(--milky) * .4);
   background:
-    radial-gradient(ellipse 45% 18% at 25% 22%, rgba(60,255,170,.45), transparent 70%),
-    radial-gradient(ellipse 40% 14% at 60% 16%, rgba(70,180,255,.4), transparent 70%),
-    radial-gradient(ellipse 30% 12% at 85% 26%, rgba(150,110,255,.3), transparent 70%);
-  filter: blur(18px);
-  animation: aurora 16s ease-in-out infinite alternate;
+    radial-gradient(ellipse 18% 60% at 50% 50%, rgba(210,220,255,.55), transparent 70%),
+    radial-gradient(ellipse 30% 70% at 50% 50%, rgba(140,160,230,.25), transparent 70%);
+  transform: rotate(-28deg); filter: blur(22px);
+}
+.starfield { inset: 0 0 25% 0; width: 100%; height: 75%; opacity: var(--stars); }
+.starfield .tw { animation: twinkle var(--d, 4s) ease-in-out var(--delay, 0s) infinite alternate; }
+@keyframes twinkle { from { opacity: .25; } to { opacity: 1; } }
+.shooting {
+  top: 12%; left: 20%; width: 140px; height: 2px; opacity: 0;
+  background: linear-gradient(90deg, rgba(255,255,255,0), #fff);
+  border-radius: 2px; transform: rotate(-18deg);
+}
+:root[data-theme="dark"] .shooting { animation: shoot 14s ease-in 6s infinite; }
+@keyframes shoot {
+  0%, 92% { opacity: 0; transform: translate(0, 0) rotate(-18deg); }
+  93% { opacity: 1; }
+  100% { opacity: 0; transform: translate(380px, 120px) rotate(-18deg); }
+}
+
+/* Aurora (night) */
+.aurora {
+  inset: 0; opacity: calc(var(--aurora) * .5);
+  background:
+    radial-gradient(ellipse 45% 16% at 24% 26%, rgba(60,255,170,.45), transparent 70%),
+    radial-gradient(ellipse 38% 12% at 58% 20%, rgba(70,180,255,.4), transparent 70%),
+    radial-gradient(ellipse 28% 10% at 82% 30%, rgba(150,110,255,.3), transparent 70%);
+  filter: blur(20px);
+  animation: aurora 18s ease-in-out infinite alternate;
 }
 @keyframes aurora { from { transform: translateX(-3%) skewX(-4deg); } to { transform: translateX(3%) skewX(4deg); } }
 
-/* Hills */
-.hill {
-  position: fixed; left: -10%; right: -10%; bottom: -60vh; height: 85vh; z-index: 0;
-  border-radius: 50% 50% 0 0 / 30% 30% 0 0;
-  background: radial-gradient(ellipse at 50% 0%, var(--grass-1) 0%, var(--grass-2) 70%);
-  box-shadow: inset 0 18px 30px var(--hill-shine);
-  transition: background .6s;
+/* Sun (day) */
+.sun {
+  top: 7vh; right: 11vw; width: 120px; height: 120px; border-radius: 50%; opacity: var(--sun);
+  background: radial-gradient(circle at 45% 45%, #fffef2 0%, #fff4b8 35%, #ffd862 70%, #ffc23d 100%);
+  box-shadow: 0 0 40px 18px rgba(255,240,170,.75), 0 0 120px 60px rgba(255,226,140,.45),
+              0 0 260px 140px rgba(255,240,200,.3);
 }
-.hill.back { left: 35%; right: -30%; bottom: -55vh; opacity: .8; filter: saturate(.8) brightness(1.1); }
+.sun::before {  /* soft rays */
+  content: ""; position: absolute; inset: -110px; border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, rgba(255,250,215,.28) 0deg 6deg, transparent 6deg 18deg);
+  -webkit-mask: radial-gradient(circle, #000 25%, transparent 70%);
+  mask: radial-gradient(circle, #000 25%, transparent 70%);
+  animation: rays 90s linear infinite;
+}
+@keyframes rays { to { transform: rotate(360deg); } }
+
+/* Moon (night) */
+.moon {
+  top: 8vh; right: 12vw; width: 96px; height: 96px; border-radius: 50%; opacity: var(--moon);
+  background:
+    radial-gradient(circle at 30% 34%, rgba(150,160,175,.32) 0 5%, transparent 9%),
+    radial-gradient(circle at 62% 58%, rgba(150,160,175,.3) 0 7%, transparent 12%),
+    radial-gradient(circle at 45% 72%, rgba(150,160,175,.24) 0 3%, transparent 7%),
+    radial-gradient(circle at 70% 30%, rgba(150,160,175,.2) 0 2%, transparent 6%),
+    radial-gradient(ellipse 40% 30% at 55% 40%, rgba(170,178,190,.18), transparent 70%),
+    radial-gradient(circle at 38% 38%, #fffff8 0%, #eef0f0 45%, #cfd6df 80%, #b8c1cd 100%);
+  box-shadow: inset -14px -10px 24px rgba(70,85,115,.45), 0 0 30px 8px rgba(225,235,255,.45),
+              0 0 110px 40px rgba(150,180,255,.22), 0 0 240px 110px rgba(110,140,230,.12);
+}
+
+/* Clouds */
+.clouds { inset: 0 0 35% 0; opacity: var(--cloud-opacity); }
+.cloud {
+  position: absolute; left: 0; width: var(--w); height: calc(var(--w) * .42);
+  background:
+    radial-gradient(ellipse 30% 46% at 30% 62%, var(--cloud-1) 0 60%, transparent 72%),
+    radial-gradient(ellipse 30% 58% at 52% 46%, var(--cloud-1) 0 60%, transparent 72%),
+    radial-gradient(ellipse 26% 42% at 74% 62%, var(--cloud-1) 0 60%, transparent 72%),
+    radial-gradient(ellipse 48% 30% at 52% 78%, var(--cloud-2) 0 62%, transparent 74%),
+    radial-gradient(ellipse 46% 26% at 52% 92%, var(--cloud-shade) 0 50%, transparent 72%);
+  filter: blur(1.2px) drop-shadow(0 10px 14px rgba(40,70,110,.12));
+  animation: drift var(--t, 160s) linear var(--delay, 0s) infinite;
+}
+@keyframes drift { from { transform: translateX(-40vw); } to { transform: translateX(115vw); } }
+
+/* Hills */
+.land { left: 0; bottom: 0; width: 100%; height: 44vh; }
 
 /* Bubbles */
-.bubbles { position: fixed; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
+.bubbles { inset: 0; overflow: hidden; }
 .bubble {
   position: absolute; bottom: -120px; border-radius: 50%;
   background:
@@ -193,7 +259,7 @@ body {
 }
 @media (prefers-reduced-motion: reduce) {
   .bubble { display: none; }
-  .stars, .aurora, .bar div { animation: none; }
+  .aurora, .bar div, .cloud, .sun::before, .starfield .tw, .shooting { animation: none !important; }
 }
 
 main { position: relative; z-index: 2; max-width: 1080px; margin: 0 auto; padding: 28px 16px 80px; }
@@ -310,6 +376,13 @@ button.theme { background: linear-gradient(180deg, var(--panel-top), var(--panel
   border-radius: 18px 18px 0 0; pointer-events: none;
 }
 .panel.wide { grid-column: 1 / -1; }
+.find-grid { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; }
+@media (max-width: 820px) { .find-grid { grid-template-columns: 1fr; } }
+.account { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.account .who { flex: 1; min-width: 220px; position: relative; }
+.account .who b { display: block; font-size: 1.05rem; }
+.account .who small { color: var(--text-soft); }
+.account .buttons { margin-top: 0; }
 .panel h2 { position: relative; margin: 0 0 4px; font-size: 1.25rem; font-weight: 600; display: flex; align-items: center; gap: 10px; }
 .panel h2 .num {
   width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: .9rem; color: #fff; flex: none;
@@ -333,6 +406,35 @@ select:focus, input[type=text]:focus {
   box-shadow: inset 0 2px 4px rgba(0,40,80,.12), 0 0 0 3px rgba(73,182,242,.45);
 }
 .mt8 { margin-top: 8px; }
+[hidden] { display: none !important; }
+.row { display: flex; gap: 8px; align-items: center; }
+.row select { flex: 1; min-width: 0; }
+.sources { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sources .mode span { padding: 9px 10px 9px 36px; font-weight: 600; font-size: .9rem; }
+.sources .mode span::before { top: 11px; left: 11px; }
+.playlists {
+  max-height: 240px; overflow: auto; padding: 4px; border-radius: 10px;
+  border: 1px solid var(--field-border); background: linear-gradient(180deg, var(--field-1), var(--field-2));
+  box-shadow: inset 0 2px 4px rgba(0,40,80,.12);
+}
+.pl-item { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 8px; cursor: pointer; }
+.pl-item:hover { background: linear-gradient(180deg, var(--mode-active-1), var(--mode-active-2)); }
+.pl-item input, .pl-tools input { accent-color: var(--green-2); width: 16px; height: 16px; flex: none; }
+.pl-item span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pl-item small { color: var(--text-soft); flex: none; }
+.pl-tools { display: flex; align-items: center; gap: 14px; margin-top: 8px; flex-wrap: wrap; font-size: .9rem; }
+.pl-tools label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.pl-tools .spacer { flex: 1; }
+.selection { margin-bottom: 0; font-weight: 600; }
+.selection.big { color: var(--alert-text); }
+.pl-empty { padding: 12px; color: var(--text-soft); font-size: .9rem; }
+.folder {
+  flex: 1; min-width: 0; padding: 9px 12px; border-radius: 10px; font-size: .9rem;
+  border: 1px solid var(--field-border); background: linear-gradient(180deg, var(--field-1), var(--field-2));
+  box-shadow: inset 0 2px 4px rgba(0,40,80,.12);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left;
+}
+.folder span { direction: ltr; unicode-bidi: isolate; }
 .mt14 { margin-top: 14px; }
 
 .modes { display: grid; gap: 8px; }
@@ -354,6 +456,10 @@ select:focus, input[type=text]:focus {
   background: linear-gradient(180deg, var(--mode-active-1), var(--mode-active-2));
   border-color: var(--aqua-2);
   box-shadow: inset 0 1px 0 var(--mode-gloss), 0 0 0 2px rgba(73,182,242,.35);
+}
+.mode.check span::before { border-radius: 5px; }
+.mode.check input:checked + span::after {
+  content: "✓"; position: absolute; left: 15px; top: 9px; color: #fff; font-weight: 700; font-size: .85rem;
 }
 .mode input:checked + span::before {
   background: radial-gradient(circle at 35% 30%, #d8ffb8 0 15%, var(--green-2) 55%, var(--green-3) 100%);
@@ -439,11 +545,43 @@ footer { position: relative; z-index: 2; text-align: center; color: var(--footer
 </style>
 </head>
 <body>
-<div class="stars" aria-hidden="true"></div>
-<div class="aurora" aria-hidden="true"></div>
-<div class="hill back"></div>
-<div class="hill"></div>
-<div class="bubbles" id="bubbles" aria-hidden="true"></div>
+<div class="scene" aria-hidden="true">
+  <div class="milky"></div>
+  <svg class="starfield" id="starfield" preserveAspectRatio="none"></svg>
+  <div class="shooting"></div>
+  <div class="aurora"></div>
+  <div class="sun"></div>
+  <div class="moon"></div>
+  <div class="clouds" id="clouds"></div>
+  <svg class="land" viewBox="0 0 1440 420" preserveAspectRatio="none">
+    <defs>
+      <linearGradient id="farHill" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" style="stop-color: var(--far-1)"/><stop offset="1" style="stop-color: var(--far-2)"/>
+      </linearGradient>
+      <linearGradient id="midHill" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" style="stop-color: var(--mid-1)"/><stop offset="1" style="stop-color: var(--mid-2)"/>
+      </linearGradient>
+      <linearGradient id="frontHill" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" style="stop-color: var(--front-1)"/><stop offset=".75" style="stop-color: var(--front-2)"/>
+      </linearGradient>
+      <filter id="grass" x="0" y="0" width="100%" height="100%">
+        <feTurbulence type="fractalNoise" baseFrequency=".9 .09" numOctaves="3" seed="7" result="noise"/>
+        <feColorMatrix in="noise" type="matrix"
+          values="0 0 0 0 .02  0 0 0 0 .16  0 0 0 0 .02  0 0 0 1.6 -.62" result="blades"/>
+        <feComposite in="blades" in2="SourceAlpha" operator="in"/>
+      </filter>
+      <filter id="soft"><feGaussianBlur stdDeviation="1.4"/></filter>
+    </defs>
+    <path fill="url(#farHill)" d="M0 238 C170 168 360 196 560 186 C760 176 905 118 1105 146 C1255 168 1355 154 1440 166 L1440 420 L0 420 Z"/>
+    <path fill="none" stroke="var(--hill-rim)" stroke-width="2" opacity=".45" filter="url(#soft)" d="M0 238 C170 168 360 196 560 186 C760 176 905 118 1105 146 C1255 168 1355 154 1440 166"/>
+    <path fill="url(#midHill)" d="M0 296 C190 236 420 246 625 268 C830 290 985 214 1185 226 C1305 233 1392 256 1440 252 L1440 420 L0 420 Z"/>
+    <path fill="none" stroke="var(--hill-rim)" stroke-width="2.5" opacity=".6" filter="url(#soft)" d="M0 296 C190 236 420 246 625 268 C830 290 985 214 1185 226 C1305 233 1392 256 1440 252"/>
+    <path fill="url(#frontHill)" d="M0 344 C245 292 525 300 765 330 C985 357 1185 300 1440 312 L1440 420 L0 420 Z"/>
+    <path fill="#000" style="opacity: var(--grass-texture)" filter="url(#grass)" d="M0 344 C245 292 525 300 765 330 C985 357 1185 300 1440 312 L1440 420 L0 420 Z"/>
+    <path fill="none" stroke="var(--hill-rim)" stroke-width="3" opacity=".75" filter="url(#soft)" d="M0 344 C245 292 525 300 765 330 C985 357 1185 300 1440 312"/>
+  </svg>
+  <div class="bubbles" id="bubbles"></div>
+</div>
 
 <main>
   <header>
@@ -496,42 +634,85 @@ footer { position: relative; z-index: 2; text-align: center; color: var(--footer
   </header>
 
   <div class="grid">
-    <section class="panel">
-      <h2><span class="num">1</span> <span data-i18n="find_title">Find songs</span></h2>
+    <section class="panel wide" id="accountPanel" aria-live="polite">
+      <div class="account">
+        <div class="who">
+          <b data-i18n="account_title">YouTube account</b>
+          <small id="accountText"></small>
+        </div>
+        <div class="buttons">
+          <button type="button" class="small" id="btnConfigure" data-i18n="btn_configure" hidden>Set up Google access…</button>
+          <button type="button" class="green small" id="btnSignIn" data-i18n="btn_sign_in" hidden>Sign in with Google</button>
+          <button type="button" class="gray small" id="btnSignOut" data-i18n="btn_sign_out" hidden>Sign out</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel wide">
+      <h2><span data-i18n="find_title">Find songs</span></h2>
       <p class="sub" data-i18n="find_sub">Reads the Google Takeout CSV and builds a page with your songs.</p>
 
-      <label class="field" for="csv" data-i18n="csv_label">CSV file</label>
-      <select id="csv"></select>
-      <input type="text" id="csvOther" class="mt8" data-i18n-placeholder="csv_other" placeholder="or paste the path to another .csv file">
+      <div class="find-grid">
+      <div class="col">
+      <label class="field" data-i18n="source_label">Source</label>
+      <div class="sources">
+        <label class="mode"><input type="radio" name="source" value="takeout" checked>
+          <span data-i18n="source_takeout">Google Takeout file</span></label>
+        <label class="mode"><input type="radio" name="source" value="account">
+          <span data-i18n="source_account">My YouTube account</span></label>
+      </div>
 
+      <div id="takeoutBox">
+        <label class="field" for="csv" data-i18n="csv_label">CSV file</label>
+        <div class="row">
+          <select id="csv"></select>
+          <button type="button" class="small" id="btnPickCsv" data-i18n="btn_choose">Choose…</button>
+        </div>
+      </div>
+
+      <div id="accountBox" hidden>
+        <label class="field" data-i18n="playlists_label">Playlists</label>
+        <div class="playlists" id="playlists" role="group" data-i18n-aria="playlists_label"></div>
+        <div class="pl-tools">
+          <label><input type="checkbox" id="selectAll"> <span data-i18n="select_all">Select all</span></label>
+          <label><input type="checkbox" id="perPlaylist"> <span data-i18n="one_file_each">One file per playlist</span></label>
+          <span class="spacer"></span>
+          <button type="button" class="small" id="btnRefreshPlaylists" data-i18n="btn_refresh">Refresh</button>
+        </div>
+        <p class="sub mt8 selection" id="selectionInfo" aria-live="polite"></p>
+      </div>
+
+      </div>
+      <div class="col">
       <label class="field" data-i18n="what_label">What to build</label>
       <div class="modes">
-        <label class="mode"><input type="radio" name="mode" value="youtube" checked>
-          <span><b data-i18n="mode_yt">YouTube links only</b><small data-i18n="mode_yt_desc">Instant. Builds the page and the .txt list.</small></span></label>
-        <label class="mode"><input type="radio" name="mode" value="itunes">
-          <span><b data-i18n="mode_itunes">Search the iTunes Store</b><small data-i18n="mode_itunes_desc">Shows link and price. Takes ~3 s per song.</small></span></label>
+        <label class="mode"><input type="radio" name="mode" value="complete" checked>
+          <span><b data-i18n="mode_complete">Complete</b><small data-i18n="mode_complete_desc">YouTube links, iTunes Store (link and price) and search buttons for the other stores. ~3 s per song.</small></span></label>
+        <label class="mode"><input type="radio" name="mode" value="youtube">
+          <span><b data-i18n="mode_yt">YouTube links only</b><small data-i18n="mode_yt_desc">Fast. The page and the .txt list of links.</small></span></label>
         <label class="mode"><input type="radio" name="mode" value="search">
-          <span><b data-i18n="mode_search">Store search buttons only</b><small data-i18n="mode_search_desc">Instant. Bandcamp, Amazon, Deezer, Spotify.</small></span></label>
+          <span><b data-i18n="mode_search">YouTube + store buttons</b><small data-i18n="mode_search_desc">Fast. Without iTunes prices. Bandcamp, Amazon, Deezer, Spotify.</small></span></label>
       </div>
+      <label class="mode check mt8"><input type="checkbox" id="checkAvailability" checked>
+        <span><b data-i18n="check_label">Check which videos still play</b><small data-i18n="check_desc">Marks unavailable videos and moves them to a separate list. Almost instant when signed in with Google; otherwise adds ~1 s per song in the fast modes.</small></span></label>
 
       <label class="field" for="exclude"><span data-i18n="exclude_label">Leave out these artists</span> <small data-i18n="exclude_hint">(comma-separated)</small></label>
       <input type="text" id="exclude" data-i18n-placeholder="exclude_placeholder" placeholder="e.g. Artist A, Artist B">
 
-      <label class="field" for="output"><span data-i18n="output_label">File name</span> <small data-i18n="output_hint">(saved in Downloads)</small></label>
-      <input type="text" id="output" value="youtube_links.html">
+      <label class="field" for="output" data-i18n="output_label">File name</label>
+      <input type="text" id="output" value="my_songs.html">
+
+      <label class="field" data-i18n="save_to_label">Save to</label>
+      <div class="row">
+        <div class="folder" id="outputDir"><span id="outputDirText"></span></div>
+        <button type="button" class="small" id="btnPickFolder" data-i18n="btn_change">Change…</button>
+        <button type="button" class="small gray" id="btnResetFolder" data-i18n="btn_downloads" hidden>Use Downloads</button>
+      </div>
+
+      </div>
+      </div>
 
       <div class="buttons"><button class="green" id="btnFind" data-i18n="start">Start</button></div>
-    </section>
-
-    <section class="panel">
-      <h2><span class="num">2</span> <span data-i18n="check_title">Check availability</span></h2>
-      <p class="sub"><span data-i18n="check_sub">Checks every link in a .txt list and separates the ones that don't play in your region. The list keeps only the available ones; the others go to a file named</span> <b>…_unavailable.txt</b>.</p>
-
-      <label class="field" for="list" data-i18n="list_label">Link list</label>
-      <select id="list"></select>
-
-      <div class="buttons"><button id="btnCheck" data-i18n="check_btn">Check</button></div>
-      <p class="sub mt14" data-i18n="check_time">Takes about 1 second per song.</p>
     </section>
 
     <section class="panel wide" aria-live="polite">
@@ -553,7 +734,7 @@ footer { position: relative; z-index: 2; text-align: center; color: var(--footer
 <div class="backdrop" id="modal" hidden>
   <section class="panel modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <h2 id="modalTitle" data-i18n="modal_title">Replace files?</h2>
-    <p data-i18n="modal_exists">Already in Downloads:</p>
+    <p data-i18n="modal_exists">Already in the chosen folder:</p>
     <ul id="modalList"></ul>
     <p class="sub mt8" data-i18n="modal_hint">To keep the current ones, cancel and change the file name.</p>
     <div class="buttons">
@@ -575,32 +756,51 @@ const STRINGS = {
     language: "Language",
     theme_toggle: "Switch between light and dark theme",
     find_title: "Find songs",
-    find_sub: "Reads the Google Takeout CSV and builds a page with your songs.",
+    find_sub: "Reads your songs (from a Google Takeout CSV or your YouTube account) and builds a page with them.",
     csv_label: "CSV file",
-    csv_other: "or paste the path to another .csv file",
+    btn_choose: "Choose…",
     no_csv: "No CSV found in Downloads/Takeout",
+    source_label: "Source",
+    source_takeout: "Google Takeout file",
+    source_account: "My YouTube account",
+    playlists_label: "Playlists",
+    select_all: "Select all",
+    one_file_each: "One file per playlist",
+    btn_refresh: "Refresh",
+    videos_count: "{n} videos",
+    liked_videos: "Liked videos",
+    playlists_loading: "Loading your playlists…",
+    playlists_sign_in: "Sign in with Google in the panel above to see your playlists.",
+    playlists_empty: "No playlists found in this account.",
+    err_need_playlists: "Choose at least one playlist.",
+    selection_info: "{n} videos selected · {time}",
+    selection_big: " — a big list: it may take a while",
+    time_fast: "less than a minute",
+    time_minutes: "about {m} min",
+    time_hours: "about {h} h {m} min",
+    err_playlists_failed: "Could not load your playlists from YouTube. Try again.",
+    name_all: "All playlists",
+    name_more: "{first} and {n} more",
+    name_library: "YouTube Music library",
     what_label: "What to build",
+    mode_complete: "Complete",
+    mode_complete_desc: "YouTube links, iTunes Store (link and price) and search buttons for the other stores. ~3 s per song.",
     mode_yt: "YouTube links only",
-    mode_yt_desc: "Instant. Builds the page and the .txt list.",
-    mode_itunes: "Search the iTunes Store",
-    mode_itunes_desc: "Shows link and price. Takes ~3 s per song.",
-    mode_search: "Store search buttons only",
-    mode_search_desc: "Instant. Bandcamp, Amazon, Deezer, Spotify.",
+    mode_yt_desc: "Fast. The page and the .txt list of links.",
+    mode_search: "YouTube + store buttons",
+    mode_search_desc: "Fast. Without iTunes prices. Bandcamp, Amazon, Deezer, Spotify.",
+    check_label: "Check which videos still play",
+    check_desc: "Marks unavailable videos and moves them to a separate list. Almost instant when signed in with Google; otherwise adds ~1 s per song in the fast modes.",
     exclude_label: "Leave out these artists",
     exclude_hint: "(comma-separated)",
     exclude_placeholder: "e.g. Artist A, Artist B",
     output_label: "File name",
-    output_hint: "(saved in Downloads)",
+    save_to_label: "Save to",
+    btn_change: "Change…",
+    btn_downloads: "Use Downloads",
     start: "Start",
-    check_title: "Check availability",
-    check_sub: "Checks every link in a .txt list and separates the ones that don't play in your region. The list keeps only the available ones; the others go to a file named",
-    list_label: "Link list",
-    no_txt: "No .txt list in Downloads",
-    check_btn: "Check",
-    check_time: "Takes about 1 second per song.",
     progress: "Progress",
     task_find: "Finding songs",
-    task_check: "Checking availability",
     st_idle: "idle",
     st_running: "running",
     st_done: "done",
@@ -612,23 +812,41 @@ const STRINGS = {
     open_file: "Open {name}",
     footer: "Songs found here can be bought or played on official stores and services.",
     modal_title: "Replace files?",
-    modal_exists: "Already in Downloads:",
+    modal_exists: "Already in the chosen folder:",
     modal_hint: "To keep the current ones, cancel and change the file name.",
     replace: "Replace",
     cancel: "Cancel",
     kept: "Nothing was changed. Change the file name to create a new version.",
     need_csv: "Choose a CSV file.",
-    need_list: "Choose a .txt list.",
     files_error: "Could not list the files: {msg}",
     err_access_denied: "Access denied.",
     err_not_found: "Not found.",
     err_invalid_request: "Invalid request.",
     err_too_large: "Request too large.",
     err_csv_not_found: "CSV file not found.",
-    err_list_not_found: ".txt list not found.",
     err_busy: "A task is already running. Wait for it to finish or click Stop.",
-    err_open_only_downloads: "Only files in the Downloads folder can be opened.",
+    err_open_not_allowed: "Only files in Downloads or in the chosen folder can be opened.",
+    err_picker_unavailable: "Could not open the file window on this computer.",
+    err_picker_busy: "A file window is already open.",
     err_unexpected: "Unexpected error.",
+    account_title: "YouTube account",
+    account_not_configured: "To read your playlists straight from YouTube, first set up Google access with the client file (.json) from Google Cloud.",
+    account_sign_in_hint: "Sign in to read your playlists. Read-only: the app can never change your account.",
+    account_waiting: "Finish signing in in the browser window that just opened…",
+    account_signed_in: "Signed in as {name}",
+    account_remembered: "You stay signed in on this computer.",
+    account_session_only: "You will need to sign in again next time.",
+    btn_configure: "Set up Google access…",
+    btn_sign_in: "Sign in with Google",
+    btn_sign_out: "Sign out",
+    err_not_configured: "Set up Google access first.",
+    err_client_invalid: "This is not a Google client file for a desktop app (.json from Google Cloud).",
+    err_invalid_state: "That sign-in link is no longer valid. Try again.",
+    err_denied: "Sign-in was cancelled or the YouTube permission was not granted.",
+    err_exchange_failed: "Google did not complete the sign-in. Try again.",
+    err_expired: "Your Google sign-in expired. Sign in again.",
+    err_network: "Could not reach Google. Check your internet connection.",
+    err_not_signed_in: "Sign in with Google first.",
   },
   "pt-BR": {
     app_title: "InfiniFind Music",
@@ -636,32 +854,51 @@ const STRINGS = {
     language: "Idioma",
     theme_toggle: "Alternar tema claro e escuro",
     find_title: "Procurar músicas",
-    find_sub: "Lê o CSV do Google Takeout e gera uma página com as músicas.",
+    find_sub: "Lê as suas músicas (de um CSV do Google Takeout ou da sua conta do YouTube) e gera uma página com elas.",
     csv_label: "Arquivo CSV",
-    csv_other: "ou cole o caminho de outro arquivo .csv",
+    btn_choose: "Escolher…",
     no_csv: "Nenhum CSV encontrado em Downloads/Takeout",
+    source_label: "Origem",
+    source_takeout: "Arquivo do Google Takeout",
+    source_account: "Minha conta do YouTube",
+    playlists_label: "Playlists",
+    select_all: "Selecionar todas",
+    one_file_each: "Um arquivo por playlist",
+    btn_refresh: "Atualizar",
+    videos_count: "{n} vídeos",
+    liked_videos: "Vídeos curtidos",
+    playlists_loading: "Carregando as suas playlists…",
+    playlists_sign_in: "Entre com o Google no painel acima para ver as suas playlists.",
+    playlists_empty: "Nenhuma playlist encontrada nesta conta.",
+    err_need_playlists: "Escolha pelo menos uma playlist.",
+    selection_info: "{n} vídeos selecionados · {time}",
+    selection_big: " — lista grande: pode demorar",
+    time_fast: "menos de um minuto",
+    time_minutes: "cerca de {m} min",
+    time_hours: "cerca de {h} h {m} min",
+    err_playlists_failed: "Não foi possível carregar as suas playlists do YouTube. Tente de novo.",
+    name_all: "Todas as playlists",
+    name_more: "{first} e mais {n}",
+    name_library: "Biblioteca do YouTube Music",
     what_label: "O que gerar",
+    mode_complete: "Completo",
+    mode_complete_desc: "Links do YouTube, loja do iTunes (link e preço) e botões de busca nas outras lojas. ~3 s por música.",
     mode_yt: "Só links do YouTube",
-    mode_yt_desc: "Instantâneo. Gera a página e a lista .txt.",
-    mode_itunes: "Procurar na loja do iTunes",
-    mode_itunes_desc: "Mostra link e preço. Leva ~3 s por música.",
-    mode_search: "Só botões de busca nas lojas",
-    mode_search_desc: "Instantâneo. Bandcamp, Amazon, Deezer, Spotify.",
+    mode_yt_desc: "Rápido. A página e a lista .txt de links.",
+    mode_search: "YouTube + botões das lojas",
+    mode_search_desc: "Rápido. Sem os preços do iTunes. Bandcamp, Amazon, Deezer, Spotify.",
+    check_label: "Verificar quais vídeos ainda tocam",
+    check_desc: "Marca os vídeos indisponíveis e separa numa lista à parte. Quase instantâneo com o login do Google; sem ele, soma ~1 s por música nos modos rápidos.",
     exclude_label: "Deixar de fora os artistas",
     exclude_hint: "(separados por vírgula)",
     exclude_placeholder: "ex.: Artista A, Artista B",
     output_label: "Nome do arquivo",
-    output_hint: "(salvo em Downloads)",
+    save_to_label: "Salvar em",
+    btn_change: "Trocar…",
+    btn_downloads: "Usar Downloads",
     start: "Começar",
-    check_title: "Verificar disponibilidade",
-    check_sub: "Confere cada link de uma lista .txt e separa os que não tocam na sua região. A lista fica só com os disponíveis; os outros vão para um arquivo",
-    list_label: "Lista de links",
-    no_txt: "Nenhuma lista .txt em Downloads",
-    check_btn: "Verificar",
-    check_time: "Leva cerca de 1 segundo por música.",
     progress: "Progresso",
     task_find: "Procurando músicas",
-    task_check: "Verificando disponibilidade",
     st_idle: "parado",
     st_running: "rodando",
     st_done: "concluído",
@@ -673,23 +910,41 @@ const STRINGS = {
     open_file: "Abrir {name}",
     footer: "As músicas encontradas aqui podem ser compradas ou ouvidas nas lojas e serviços oficiais.",
     modal_title: "Substituir arquivos?",
-    modal_exists: "Já existe em Downloads:",
+    modal_exists: "Já existe na pasta escolhida:",
     modal_hint: "Para manter os atuais, cancele e troque o nome do arquivo.",
     replace: "Substituir",
     cancel: "Cancelar",
     kept: "Nada foi alterado. Troque o nome do arquivo para gerar uma versão nova.",
     need_csv: "Escolha um arquivo CSV.",
-    need_list: "Escolha uma lista .txt.",
     files_error: "Não consegui listar os arquivos: {msg}",
     err_access_denied: "Acesso negado.",
     err_not_found: "Não encontrado.",
     err_invalid_request: "Pedido inválido.",
     err_too_large: "Pedido grande demais.",
     err_csv_not_found: "Arquivo CSV não encontrado.",
-    err_list_not_found: "Lista .txt não encontrada.",
     err_busy: "Já tem uma tarefa rodando. Espere terminar ou clique em Parar.",
-    err_open_only_downloads: "Só é possível abrir arquivos da pasta Downloads.",
+    err_open_not_allowed: "Só é possível abrir arquivos de Downloads ou da pasta escolhida.",
+    err_picker_unavailable: "Não foi possível abrir a janela de arquivos neste computador.",
+    err_picker_busy: "Já existe uma janela de arquivos aberta.",
     err_unexpected: "Erro inesperado.",
+    account_title: "Conta do YouTube",
+    account_not_configured: "Para ler as suas playlists direto do YouTube, configure primeiro o acesso ao Google com o arquivo de cliente (.json) do Google Cloud.",
+    account_sign_in_hint: "Entre para ler as suas playlists. Somente leitura: o app nunca altera a sua conta.",
+    account_waiting: "Conclua o login na janela do navegador que acabou de abrir…",
+    account_signed_in: "Conectado como {name}",
+    account_remembered: "Você continua conectado neste computador.",
+    account_session_only: "Na próxima vez será preciso entrar de novo.",
+    btn_configure: "Configurar acesso ao Google…",
+    btn_sign_in: "Entrar com o Google",
+    btn_sign_out: "Sair",
+    err_not_configured: "Configure o acesso ao Google primeiro.",
+    err_client_invalid: "Este não é um arquivo de cliente do Google para app de computador (.json do Google Cloud).",
+    err_invalid_state: "Esse link de login não vale mais. Tente de novo.",
+    err_denied: "O login foi cancelado ou a permissão do YouTube não foi concedida.",
+    err_exchange_failed: "O Google não concluiu o login. Tente de novo.",
+    err_expired: "O seu login do Google expirou. Entre de novo.",
+    err_network: "Não foi possível falar com o Google. Verifique a sua internet.",
+    err_not_signed_in: "Entre com o Google primeiro.",
   },
   "es": {
     app_title: "InfiniFind Music",
@@ -697,32 +952,51 @@ const STRINGS = {
     language: "Idioma",
     theme_toggle: "Cambiar entre tema claro y oscuro",
     find_title: "Buscar canciones",
-    find_sub: "Lee el CSV de Google Takeout y genera una página con tus canciones.",
+    find_sub: "Lee tus canciones (de un CSV de Google Takeout o de tu cuenta de YouTube) y genera una página con ellas.",
     csv_label: "Archivo CSV",
-    csv_other: "o pega la ruta de otro archivo .csv",
+    btn_choose: "Elegir…",
     no_csv: "No se encontró ningún CSV en Descargas/Takeout",
+    source_label: "Origen",
+    source_takeout: "Archivo de Google Takeout",
+    source_account: "Mi cuenta de YouTube",
+    playlists_label: "Listas",
+    select_all: "Seleccionar todas",
+    one_file_each: "Un archivo por lista",
+    btn_refresh: "Actualizar",
+    videos_count: "{n} videos",
+    liked_videos: "Videos que me gustan",
+    playlists_loading: "Cargando tus listas…",
+    playlists_sign_in: "Inicia sesión con Google en el panel de arriba para ver tus listas.",
+    playlists_empty: "No se encontraron listas en esta cuenta.",
+    err_need_playlists: "Elige al menos una lista.",
+    selection_info: "{n} videos seleccionados · {time}",
+    selection_big: " — lista grande: puede tardar",
+    time_fast: "menos de un minuto",
+    time_minutes: "unos {m} min",
+    time_hours: "unas {h} h {m} min",
+    err_playlists_failed: "No se pudieron cargar tus listas de YouTube. Inténtalo de nuevo.",
+    name_all: "Todas las listas",
+    name_more: "{first} y {n} más",
+    name_library: "Biblioteca de YouTube Music",
     what_label: "Qué generar",
+    mode_complete: "Completo",
+    mode_complete_desc: "Enlaces de YouTube, tienda de iTunes (enlace y precio) y botones de búsqueda en las otras tiendas. ~3 s por canción.",
     mode_yt: "Solo enlaces de YouTube",
-    mode_yt_desc: "Instantáneo. Genera la página y la lista .txt.",
-    mode_itunes: "Buscar en la tienda de iTunes",
-    mode_itunes_desc: "Muestra enlace y precio. Tarda ~3 s por canción.",
-    mode_search: "Solo botones de búsqueda en tiendas",
-    mode_search_desc: "Instantáneo. Bandcamp, Amazon, Deezer, Spotify.",
+    mode_yt_desc: "Rápido. La página y la lista .txt de enlaces.",
+    mode_search: "YouTube + botones de tiendas",
+    mode_search_desc: "Rápido. Sin los precios de iTunes. Bandcamp, Amazon, Deezer, Spotify.",
+    check_label: "Comprobar qué videos aún se reproducen",
+    check_desc: "Marca los videos no disponibles y los separa en otra lista. Casi instantáneo con la sesión de Google; sin ella, suma ~1 s por canción en los modos rápidos.",
     exclude_label: "Excluir a estos artistas",
     exclude_hint: "(separados por comas)",
     exclude_placeholder: "ej.: Artista A, Artista B",
     output_label: "Nombre del archivo",
-    output_hint: "(se guarda en Descargas)",
+    save_to_label: "Guardar en",
+    btn_change: "Cambiar…",
+    btn_downloads: "Usar Descargas",
     start: "Empezar",
-    check_title: "Comprobar disponibilidad",
-    check_sub: "Revisa cada enlace de una lista .txt y separa los que no se reproducen en tu región. La lista se queda solo con los disponibles; los demás van a un archivo",
-    list_label: "Lista de enlaces",
-    no_txt: "No hay listas .txt en Descargas",
-    check_btn: "Comprobar",
-    check_time: "Tarda cerca de 1 segundo por canción.",
     progress: "Progreso",
     task_find: "Buscando canciones",
-    task_check: "Comprobando disponibilidad",
     st_idle: "en espera",
     st_running: "en curso",
     st_done: "listo",
@@ -734,23 +1008,41 @@ const STRINGS = {
     open_file: "Abrir {name}",
     footer: "Las canciones encontradas aquí se pueden comprar o escuchar en tiendas y servicios oficiales.",
     modal_title: "¿Reemplazar archivos?",
-    modal_exists: "Ya existe en Descargas:",
+    modal_exists: "Ya existe en la carpeta elegida:",
     modal_hint: "Para conservar los actuales, cancela y cambia el nombre del archivo.",
     replace: "Reemplazar",
     cancel: "Cancelar",
     kept: "No se cambió nada. Cambia el nombre del archivo para generar una versión nueva.",
     need_csv: "Elige un archivo CSV.",
-    need_list: "Elige una lista .txt.",
     files_error: "No se pudieron listar los archivos: {msg}",
     err_access_denied: "Acceso denegado.",
     err_not_found: "No encontrado.",
     err_invalid_request: "Solicitud no válida.",
     err_too_large: "Solicitud demasiado grande.",
     err_csv_not_found: "Archivo CSV no encontrado.",
-    err_list_not_found: "Lista .txt no encontrada.",
     err_busy: "Ya hay una tarea en curso. Espera a que termine o pulsa Detener.",
-    err_open_only_downloads: "Solo se pueden abrir archivos de la carpeta Descargas.",
+    err_open_not_allowed: "Solo se pueden abrir archivos de Descargas o de la carpeta elegida.",
+    err_picker_unavailable: "No se pudo abrir la ventana de archivos en este equipo.",
+    err_picker_busy: "Ya hay una ventana de archivos abierta.",
     err_unexpected: "Error inesperado.",
+    account_title: "Cuenta de YouTube",
+    account_not_configured: "Para leer tus listas directamente de YouTube, primero configura el acceso a Google con el archivo de cliente (.json) de Google Cloud.",
+    account_sign_in_hint: "Inicia sesión para leer tus listas. Solo lectura: la app nunca cambia tu cuenta.",
+    account_waiting: "Termina de iniciar sesión en la ventana del navegador que se acaba de abrir…",
+    account_signed_in: "Sesión iniciada como {name}",
+    account_remembered: "Tu sesión se mantiene en este equipo.",
+    account_session_only: "La próxima vez tendrás que iniciar sesión de nuevo.",
+    btn_configure: "Configurar acceso a Google…",
+    btn_sign_in: "Iniciar sesión con Google",
+    btn_sign_out: "Cerrar sesión",
+    err_not_configured: "Primero configura el acceso a Google.",
+    err_client_invalid: "Este no es un archivo de cliente de Google para app de escritorio (.json de Google Cloud).",
+    err_invalid_state: "Ese enlace de inicio de sesión ya no es válido. Inténtalo de nuevo.",
+    err_denied: "Se canceló el inicio de sesión o no se concedió el permiso de YouTube.",
+    err_exchange_failed: "Google no completó el inicio de sesión. Inténtalo de nuevo.",
+    err_expired: "Tu sesión de Google caducó. Inicia sesión de nuevo.",
+    err_network: "No se pudo conectar con Google. Revisa tu conexión a internet.",
+    err_not_signed_in: "Primero inicia sesión con Google.",
   },
 };
 
@@ -799,6 +1091,8 @@ function chooseLanguage(code) {
   closeLangMenu(true);
   loadFiles().catch(() => {});
   render(lastState);
+  renderAccount();
+  renderPlaylists();
 }
 
 $("langButton").onclick = () => ($("langMenu").hidden ? openLangMenu() : closeLangMenu(false));
@@ -826,6 +1120,41 @@ $("btnTheme").onclick = () => {
   document.documentElement.dataset.theme = next;
   try { localStorage.setItem("theme", next); } catch (e) {}
 };
+
+// ---------- Scene: stars and clouds ----------
+(function () {
+  const svg = $("starfield");
+  const ns = "http://www.w3.org/2000/svg";
+  svg.setAttribute("viewBox", "0 0 1000 600");
+  const colors = ["#ffffff", "#ffffff", "#ffffff", "#dbe8ff", "#fff3d6", "#cfe0ff"];
+  for (let i = 0; i < 420; i++) {
+    const star = document.createElementNS(ns, "circle");
+    const y = Math.pow(Math.random(), 1.6) * 600;  // denser near the top
+    star.setAttribute("cx", (Math.random() * 1000).toFixed(1));
+    star.setAttribute("cy", y.toFixed(1));
+    const big = Math.random() < 0.08;
+    star.setAttribute("r", (big ? 1.6 + Math.random() * 1.0 : 0.45 + Math.random() * 0.9).toFixed(2));
+    star.setAttribute("fill", colors[Math.floor(Math.random() * colors.length)]);
+    star.setAttribute("opacity", (0.55 + Math.random() * 0.45).toFixed(2));
+    if (big || Math.random() < 0.25) {
+      star.setAttribute("class", "tw");
+      star.style.setProperty("--d", (2.5 + Math.random() * 4).toFixed(1) + "s");
+      star.style.setProperty("--delay", (-Math.random() * 6).toFixed(1) + "s");
+    }
+    svg.appendChild(star);
+  }
+  const clouds = $("clouds");
+  const specs = [[300, 6, 170], [220, 16, 210], [360, 24, 260], [180, 9, 190], [260, 31, 230], [200, 3, 280]];
+  specs.forEach(([width, top, time], i) => {
+    const c = document.createElement("div");
+    c.className = "cloud";
+    c.style.setProperty("--w", width + "px");
+    c.style.top = top + "vh";
+    c.style.setProperty("--t", time + "s");
+    c.style.setProperty("--delay", (-(i / specs.length) * time - Math.random() * 20).toFixed(0) + "s");
+    clouds.appendChild(c);
+  });
+})();
 
 // ---------- Decorative bubbles ----------
 (function () {
@@ -887,21 +1216,31 @@ function confirmReplace(files) {
   });
 }
 
+const pickedCsvs = [];
+let homeDir = "";
+
+function shortPath(p) {
+  return homeDir && p.startsWith(homeDir) ? "~" + p.slice(homeDir.length) : p;
+}
+
 async function loadFiles() {
-  const { csvs, txts } = await api("/api/files");
+  const { csvs, output_dir, downloads, home } = await api("/api/files");
+  homeDir = home || "";
+  $("outputDirText").textContent = shortPath(output_dir);
+  $("outputDir").title = output_dir;
+  $("btnResetFolder").hidden = output_dir === downloads;
+
   const sel = $("csv"), current = sel.value;
   sel.replaceChildren();
-  if (!csvs.length) sel.add(new Option(t("no_csv"), ""));
+  for (const p of pickedCsvs) {
+    if (!csvs.some((c) => c.path === p)) sel.add(new Option(shortPath(p), p));
+  }
+  if (!csvs.length && !pickedCsvs.length) sel.add(new Option(t("no_csv"), ""));
   for (const c of csvs) sel.add(new Option(c.name, c.path));
   const library = csvs.find((c) => c.name.includes("music library songs"));
   sel.value = current || (library ? library.path : sel.value);
+  suggestOutput();
 
-  const list = $("list"), currentList = list.value;
-  list.replaceChildren();
-  if (!txts.length) list.add(new Option(t("no_txt"), ""));
-  for (const p of txts) list.add(new Option(fileName(p), p));
-  const preferred = txts.find((p) => ["youtube_links.txt", "links_youtube.txt"].includes(fileName(p)));
-  list.value = currentList || preferred || list.value;
 }
 
 let lastState = null;
@@ -938,12 +1277,12 @@ function render(state) {
   else chip.textContent = t("st_idle");
 
   $("btnStop").disabled = !state.running;
-  $("btnFind").disabled = $("btnCheck").disabled = state.running;
+  $("btnFind").disabled = state.running;
 
   const log = $("log");
   if (state.log.length) {
     const atEnd = log.scrollTop + log.clientHeight >= log.scrollHeight - 20;
-    log.textContent = state.log.join("\n");
+    log.textContent = state.log.map((l) => (l.startsWith("@@error ") ? t("err_" + l.slice(8)) : l)).join("\n");
     if (atEnd) log.scrollTop = log.scrollHeight;
   } else if (!state.running) {
     log.textContent = t("log_empty");
@@ -969,14 +1308,23 @@ function render(state) {
 
 $("btnFind").onclick = async () => {
   showAlert("");
-  const csv = $("csvOther").value.trim() || $("csv").value;
-  if (!csv) return showAlert(t("need_csv"));
-  const request = {
-    csv,
+  const source = document.querySelector("input[name=source]:checked").value;
+  const request = { source };
+  if (source === "account") {
+    request.playlists = [...document.querySelectorAll("#playlists input:checked")].map((i) => i.value);
+    if (!request.playlists.length) return showAlert(t("err_need_playlists"));
+    request.per_playlist = $("perPlaylist").checked;
+  } else {
+    request.csv = $("csv").value;
+    if (!request.csv) return showAlert(t("need_csv"));
+  }
+  Object.assign(request, {
     mode: document.querySelector("input[name=mode]:checked").value,
+    check: $("checkAvailability").checked,
     exclude: $("exclude").value.trim(),
     output: $("output").value.trim(),
-  };
+    auto_name: !outputEdited,
+  });
   try {
     await api("/api/find", request);
     follow();
@@ -989,23 +1337,270 @@ $("btnFind").onclick = async () => {
   }
 };
 
-$("btnCheck").onclick = async () => {
+// ---------- File and folder dialogs (opened by the local server / desktop window) ----------
+async function pick(kind) {
   showAlert("");
-  if (!$("list").value) return showAlert(t("need_list"));
-  try { await api("/api/check", { list: $("list").value }); follow(); }
+  const buttons = ["btnPickCsv", "btnPickFolder", "btnConfigure"].map($);
+  buttons.forEach((b) => { b.disabled = true; });
+  try {
+    return (await api("/api/pick", { kind })).path;
+  } catch (err) {
+    showAlert(err.message);
+    return null;
+  } finally {
+    buttons.forEach((b) => { b.disabled = false; });
+  }
+}
+
+$("btnPickCsv").onclick = async () => {
+  const path = await pick("csv");
+  if (!path) return;
+  if (!pickedCsvs.includes(path)) pickedCsvs.unshift(path);
+  await loadFiles();
+  $("csv").value = path;
+};
+
+$("btnPickFolder").onclick = async () => {
+  if (await pick("folder")) await loadFiles();
+};
+
+$("btnResetFolder").onclick = async () => {
+  try { await api("/api/output/reset", {}); await loadFiles(); }
   catch (err) { showAlert(err.message); }
 };
 
 $("btnStop").onclick = () => api("/api/stop", {}).catch((err) => showAlert(err.message));
 
-// Suggest a file name for each mode
-document.querySelectorAll("input[name=mode]").forEach((r) => r.addEventListener("change", () => {
-  const names = { youtube: "youtube_links.html", itunes: "my_songs.html", search: "my_songs.html" };
-  if (Object.values(names).includes($("output").value)) $("output").value = names[r.value];
+document.querySelectorAll("input[name=mode]").forEach((r) => r.addEventListener("change", updateSelectionInfo));
+
+// ---------- File name: suggested from what is selected, always command-line friendly ----------
+// Lowercase ASCII letters, digits and "_" only: no spaces, accents or symbols (same rule as the server).
+function slugify(text) {
+  return text.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 80);
+}
+
+let outputEdited = false;  // the user typed a name: stop suggesting
+
+function suggestedBase() {
+  if (currentSource() === "account") {
+    const ids = new Set([...document.querySelectorAll("#playlists input:checked")].map((b) => b.value));
+    const chosen = (playlists || []).filter((p) => ids.has(p.id));
+    const names = chosen.map((p) => (p.likes ? t("liked_videos") : p.title));
+    if (!names.length) return "my_songs";
+    if (names.length > 1 && names.length === (playlists || []).length) return t("name_all");
+    if (names.length <= 3) return names.join(" ");
+    return t("name_more", { first: names[0], n: names.length - 1 });
+  }
+  const option = $("csv").selectedOptions[0];
+  if (!option || !option.value) return "my_songs";
+  // Compared after slugify, so accents written in any Unicode form (macOS file names) match.
+  const name = slugify(fileName(option.value).replace(/\.csv$/i, ""));
+  if (name === "music_library_songs") return t("name_library");
+  // Takeout playlist exports: "Vídeos da playlist X.csv" (pt), "X videos.csv" (en).
+  return name.replace(/^videos_da_playlist_/, "").replace(/^videos_de_la_lista_/, "").replace(/_videos$/, "") || name;
+}
+
+function suggestOutput() {
+  if (outputEdited) return;
+  $("output").value = (slugify(suggestedBase()) || "my_songs") + ".html";
+}
+
+$("output").addEventListener("input", () => { outputEdited = $("output").value.trim() !== ""; if (!outputEdited) suggestOutput(); });
+$("output").addEventListener("change", () => {
+  const value = $("output").value.trim();
+  if (!value) { outputEdited = false; return suggestOutput(); }
+  $("output").value = (slugify(value.replace(/\.html$/i, "")) || "my_songs") + ".html";
+});
+$("csv").addEventListener("change", suggestOutput);
+
+// ---------- YouTube account (sign-in happens in the user's browser) ----------
+let account = null;
+let accountPolling = null;
+
+function renderAccount() {
+  const a = account || { configured: false, signed_in: false };
+  const waiting = accountPolling !== null && !a.signed_in;
+  $("btnConfigure").hidden = a.configured;
+  $("btnSignIn").hidden = !a.configured || a.signed_in;
+  $("btnSignIn").disabled = waiting;
+  $("btnSignOut").hidden = !a.signed_in;
+  let text;
+  if (!a.configured) text = t("account_not_configured");
+  else if (a.signed_in) {
+    text = t("account_signed_in", { name: a.channel || "YouTube" }) + " · " +
+           t(a.remembered ? "account_remembered" : "account_session_only");
+  } else if (waiting) text = t("account_waiting");
+  else text = t("account_sign_in_hint");
+  $("accountText").textContent = text;
+}
+
+async function loadAccount() {
+  const wasSignedIn = account && account.signed_in;
+  try { account = await api("/api/account"); } catch (err) { showAlert(err.message); }
+  renderAccount();
+  if (account && account.signed_in !== wasSignedIn) { playlists = null; renderSource(); }
+  return account;
+}
+
+// ---------- Source: Takeout file or the user's YouTube playlists ----------
+let playlists = null;  // null = not loaded yet
+let playlistsLoading = false;
+
+function currentSource() {
+  return document.querySelector("input[name=source]:checked").value;
+}
+
+function playlistMessage(key) {
+  const p = document.createElement("div");
+  p.className = "pl-empty";
+  p.textContent = t(key);
+  $("playlists").replaceChildren(p);
+}
+
+function renderPlaylists() {
+  const signedIn = account && account.signed_in;
+  $("btnRefreshPlaylists").disabled = !signedIn || playlistsLoading;
+  $("selectAll").disabled = !signedIn || !playlists || !playlists.length;
+  if (!signedIn) return playlistMessage("playlists_sign_in");
+  if (playlistsLoading || playlists === null) return playlistMessage("playlists_loading");
+  if (!playlists.length) return playlistMessage("playlists_empty");
+  const checked = new Set([...document.querySelectorAll("#playlists input:checked")].map((i) => i.value));
+  $("playlists").replaceChildren(...playlists.map((p) => {
+    const label = document.createElement("label");
+    label.className = "pl-item";
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.value = p.id;
+    box.checked = checked.has(p.id);
+    box.onchange = syncSelectAll;
+    const name = document.createElement("span");
+    name.textContent = p.likes ? t("liked_videos") : p.title;
+    name.title = name.textContent;
+    const count = document.createElement("small");
+    count.textContent = p.count === null || p.count === undefined ? "" : t("videos_count", { n: p.count });
+    label.append(box, name, count);
+    return label;
+  }));
+  syncSelectAll();
+}
+
+function syncSelectAll() {
+  const boxes = [...document.querySelectorAll("#playlists input")];
+  $("selectAll").checked = boxes.length > 0 && boxes.every((b) => b.checked);
+  updateSelectionInfo();
+  suggestOutput();
+}
+
+$("selectAll").onchange = () => {
+  document.querySelectorAll("#playlists input").forEach((b) => { b.checked = $("selectAll").checked; });
+  updateSelectionInfo();
+  suggestOutput();
+};
+
+// How many videos are selected and roughly how long it will take, before clicking Start.
+function formatDuration(seconds) {
+  if (seconds < 60) return t("time_fast");
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return t("time_minutes", { m: minutes });
+  return t("time_hours", { h: Math.floor(minutes / 60), m: minutes % 60 });
+}
+
+function updateSelectionInfo() {
+  const info = $("selectionInfo");
+  const ids = new Set([...document.querySelectorAll("#playlists input:checked")].map((b) => b.value));
+  const chosen = (playlists || []).filter((p) => ids.has(p.id));
+  if (!chosen.length) { info.textContent = ""; info.classList.remove("big"); return; }
+  const videos = chosen.reduce((sum, p) => sum + (p.count || 0), 0);
+  const mode = document.querySelector("input[name=mode]:checked").value;
+  const check = $("checkAvailability").checked;
+  // ~3.1 s per song in Complete mode (iTunes limit), ~1 s with the availability check, plus reading.
+  // Signed in, the check goes through the YouTube API (50 videos per request): almost instant.
+  const viaApi = account && account.signed_in;
+  const perVideo = mode === "complete" ? 3.2 : check && !viaApi ? 1.1 : 0.02;
+  const seconds = videos * perVideo + Math.ceil(videos / 50) * 0.5;
+  info.textContent = t("selection_info", { n: videos, time: formatDuration(seconds) }) +
+                     (seconds >= 15 * 60 ? t("selection_big") : "");
+  info.classList.toggle("big", seconds >= 15 * 60);
+}
+
+$("checkAvailability").addEventListener("change", updateSelectionInfo);
+
+async function loadPlaylists() {
+  if (!(account && account.signed_in) || playlistsLoading) return renderPlaylists();
+  playlistsLoading = true;
+  renderPlaylists();
+  try {
+    playlists = (await api("/api/playlists")).playlists;
+  } catch (err) {
+    showAlert(err.message);
+    playlists = null;
+    if (err.data && err.data.error === "expired") loadAccount();
+  } finally {
+    playlistsLoading = false;
+  }
+  renderPlaylists();
+}
+
+function renderSource() {
+  const fromAccount = currentSource() === "account";
+  $("takeoutBox").hidden = fromAccount;
+  $("accountBox").hidden = !fromAccount;
+  if (fromAccount && playlists === null && account && account.signed_in) loadPlaylists();
+  else renderPlaylists();
+  suggestOutput();
+}
+
+document.querySelectorAll("input[name=source]").forEach((r) => r.addEventListener("change", () => {
+  try { localStorage.setItem("source", currentSource()); } catch (e) {}
+  showAlert("");
+  renderSource();
 }));
+
+$("btnRefreshPlaylists").onclick = () => { playlists = null; loadPlaylists(); };
+
+(function restoreSource() {
+  let saved = null;
+  try { saved = localStorage.getItem("source"); } catch (e) {}
+  const radio = document.querySelector(`input[name=source][value="${saved === "account" ? "account" : "takeout"}"]`);
+  radio.checked = true;
+})();
+
+function stopAccountPolling() {
+  clearInterval(accountPolling);
+  accountPolling = null;
+}
+
+$("btnConfigure").onclick = async () => {
+  if (await pick("client")) await loadAccount();
+};
+
+$("btnSignIn").onclick = async () => {
+  showAlert("");
+  try { await api("/api/account/login", {}); }
+  catch (err) { return showAlert(err.message); }
+  stopAccountPolling();
+  const started = Date.now();
+  accountPolling = setInterval(async () => {
+    const a = await loadAccount();
+    if ((a && a.signed_in) || Date.now() - started > 10 * 60 * 1000) {
+      stopAccountPolling();
+      renderAccount();
+    }
+  }, 2000);
+  renderAccount();
+};
+
+$("btnSignOut").onclick = async () => {
+  stopAccountPolling();
+  try { account = await api("/api/account/logout", {}); } catch (err) { showAlert(err.message); }
+  renderAccount();
+};
 
 applyLanguage();
 render(null);
+renderSource();
+loadAccount();
 loadFiles().catch((err) => showAlert(t("files_error", { msg: err.message })));
 follow();
 </script>
