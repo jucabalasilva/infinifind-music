@@ -17,14 +17,17 @@
 
 - **Reads the Google Takeout CSV** (YouTube Music library or playlists), with headers in English,
   Portuguese or Spanish.
-- **Looks up each song in the iTunes Store**, with link and price, and builds search buttons for
-  Bandcamp, Amazon Music, Deezer and Spotify.
-- **Builds a list of YouTube Music links** as a page and as a `.txt` file, optionally leaving
-  some artists out.
-- **Checks which links still play in your region** and moves the unavailable ones to a
-  separate file.
+- **Builds one complete page** (the default): for each song, its YouTube and YouTube Music
+  links, the iTunes Store match with link and price, and search buttons for Bandcamp, Amazon
+  Music, Deezer and Spotify. Faster modes skip iTunes or keep only the YouTube links.
+- **Writes a `.txt` list of YouTube Music links**, optionally leaving some artists out.
+- **Checks which videos still play in your region** while it builds the page (on by default):
+  unavailable ones are marked on the page and moved to a separate `_unavailable.txt` list. An
+  older `.txt` list can still be checked from the command line with `infinifind-check`.
 - **Desktop app** with its own window, light/dark theme, language picker (English is the
   default) and a progress bar. It also runs in the browser or from the command line.
+- **Choose your files and folders**: pick the Takeout CSV anywhere on your
+  computer, and choose the folder where results are saved (Downloads by default).
 
 Everything runs on your computer: no account, no API key and no data collection.
 
@@ -88,8 +91,9 @@ Folder and file names follow your account's language. In Portuguese, for example
 
 ### Using a playlist
 
-- **In the app:** every playlist shows up in the **CSV file** list. Pick one, choose what to
-  build and click **Start**.
+- **In the app:** playlists in `Downloads/Takeout` show up in the **CSV file** list. If your
+  Takeout folder is somewhere else, click **Choose…** next to the list and select the CSV.
+  Then choose what to build and click **Start**.
 - **On the command line:**
 
   ```bash
@@ -105,6 +109,33 @@ connection the first time. The results are cached for the next runs.
 - It never exports the audio of catalog songs, only lists. Songs downloaded in the YouTube Music
   phone app are encrypted and only play inside that app.
 - The only audio files you get are the ones you uploaded yourself (`music-uploads`).
+
+## Signing in with YouTube (preview)
+
+Instead of exporting with Takeout, you can sign in with your Google account and let the app read
+your playlists directly. The app asks Google only for **read-only** access
+(`youtube.readonly`): it can read your channel name and playlists, and can never change anything.
+
+- Sign-in happens in your own browser (Google blocks sign-in inside app windows) and comes back to
+  the app automatically. **Sign out** revokes the access at Google.
+- For now you need your own Google Cloud client ID (free, about 15 minutes): follow
+  [docs/google-cloud-setup.md](docs/google-cloud-setup.md). Released builds will ship a client ID
+  verified by Google, so regular users won't need this step.
+- The YouTube API doesn't expose the YouTube Music *library* (songs and albums you added) or
+  *Watch later*; use the Takeout export for those.
+
+Once signed in, choose **Source → My YouTube account** in the app. Your playlists (and your
+liked videos) are listed with their number of videos: tick the ones you want, or **Select all**.
+Below the list, the app shows how many videos are selected and roughly how long it will take
+(a big liked-videos list can have thousands), then click **Start**. By default you get one page with a **Playlist** label on each song (a video
+that is in several playlists appears once); tick **One file per playlist** to get a separate page
+and list for each one. Deleted and private videos are listed as unavailable.
+
+**File names** are suggested from what you selected: the playlist name (`animes_e_games.html`),
+up to three names joined (`mpb_rock.html`), "and N more" or "all playlists", or the Takeout file
+name (`Vídeos da playlist Aberturas.csv` → `aberturas.html`). They are always command-line friendly:
+lowercase letters, digits and `_` only, without spaces, accents or symbols. A name you type is
+kept (and normalized the same way: "Minhas Músicas" → `minhas_musicas.html`).
 
 ## Installation
 
@@ -157,23 +188,27 @@ link printed in the terminal.
 |---|---|
 | `infinifind` | Opens the desktop app (or the browser version without pywebview). |
 | `infinifind-web` | Opens the interface in your browser. |
-| `infinifind-find` | Reads a Takeout CSV and builds the page and link list. |
-| `infinifind-check` | Removes links that no longer play in your region. |
+| `infinifind-find` | Reads a Takeout CSV and builds the page, the link list and the unavailable list. |
+| `infinifind-check` | Command line only: removes links that no longer play from an older `.txt` list. |
 
 Each one also runs as a module, without installing: for example
 `PYTHONPATH=src python3 -m infinifind_music.finder ...`.
 
 ```bash
-# YouTube Music links only (instant), leaving two artists out
-infinifind-find "music library songs.csv" --youtube-only --exclude-artists "Artist A,Artist B"
-
-# Look up every song in the iTunes Store (~3 s per song; Ctrl+C stops and a new run resumes)
+# Complete page: YouTube + iTunes + store buttons, checking which videos still play
+# (~3 s per song; Ctrl+C stops and a new run resumes)
 infinifind-find "music library songs.csv"
 
-# Store search buttons only
+# YouTube links only (fast), leaving two artists out
+infinifind-find "music library songs.csv" --youtube-only --exclude-artists "Artist A,Artist B"
+
+# YouTube + store search buttons, without iTunes prices (fast)
 infinifind-find "music library songs.csv" --no-itunes
 
-# Check which links still play
+# Skip the availability check (saves ~1 s per song in the fast modes)
+infinifind-find "music library songs.csv" --youtube-only --skip-availability
+
+# Check a list you already have
 infinifind-check ~/Downloads/youtube_links.txt
 
 # Any of them in Portuguese or Spanish
@@ -181,7 +216,10 @@ infinifind-find "music library songs.csv" --youtube-only --lang pt-BR
 infinifind-check ~/Downloads/youtube_links.txt --lang es
 ```
 
-Results are saved to **Downloads**. To try it without your own data, use the files in `examples/`.
+The command line saves results to **Downloads** unless `--output` includes a folder. In the app,
+use **Save to → Change…** to pick another folder; your choice is remembered (and
+**Use Downloads** goes back to the default). To try it without your own data, use the files in
+`examples/`.
 
 ## Languages
 
@@ -204,10 +242,18 @@ language, add it to both.
 - External services it talks to, and what they receive:
   - **iTunes Search (Apple):** artist and title of each song, plus your IP address.
   - **YouTube:** the ID of each video, to get the title (playlists) and check availability,
-    plus your IP address.
+    plus your IP address. When you are signed in with Google, this goes through the official
+    YouTube Data API (50 videos per request, using your country to detect regional blocks);
+    otherwise the app reads each public video page.
+- **If you sign in with Google:** the app talks to Google's sign-in and YouTube Data API servers
+  with your permission, only to read your channel name and playlists. The sign-in token stays in
+  the app (never in the page, logs or generated files); the long-lived part is kept in your
+  system keychain (macOS Keychain, Windows Credential Manager or Secret Service) so you stay
+  signed in. Your Google client file is kept in the app-data folder, readable only by you.
 - Stored on your computer in plain text: the search cache (`~/Library/Caches/InfiniFindMusic`
   on macOS, `~/.cache/InfiniFindMusic` on Linux, `%LOCALAPPDATA%\InfiniFindMusic` on Windows),
-  the macOS app log (`~/Library/Logs/InfiniFindMusic.log`) and your theme and language choice.
+  the macOS app log (`~/Library/Logs/InfiniFindMusic.log`), your theme and language choice, and
+  the output folder you picked (`settings.json` in the app-data folder).
 - The `.gitignore` keeps results, caches and Takeout files from being pushed to GitHub by mistake.
 
 ## Security
@@ -216,12 +262,15 @@ language, add it to both.
   token created on every run.
 - It rejects requests from other websites open in your browser and uses a strict Content
   Security Policy.
-- It only writes and opens files in the Downloads folder, and asks before overwriting anything.
+- It only writes and opens files in Downloads or in a folder you picked yourself in the
+  system's folder window, and asks before overwriting anything.
 - External scripts run without a shell, and all displayed text is escaped.
+- Google sign-in uses OAuth 2.0 for desktop apps with PKCE, a one-time `state`, the read-only
+  YouTube scope only, and token revocation on sign-out.
 
 **Known limitations:** the generated `.app` is signed locally (*ad-hoc*), is not notarized by
-Apple and runs without the *hardened runtime*. The availability check reads public YouTube
-pages, whose format may change.
+Apple and runs without the *hardened runtime*. Without Google sign-in, the availability check
+reads public YouTube pages, whose format may change.
 
 Found a security issue? See [SECURITY.md](SECURITY.md).
 
@@ -242,9 +291,14 @@ infinifind-music/
 │   ├── finder.py               reads the Takeout CSV, builds pages and lists
 │   ├── availability.py         checks which links still play
 │   ├── i18n.py                 translations (en-US, pt-BR, es)
-│   ├── paths.py                Downloads, cache and app-data folders
+│   ├── paths.py                Downloads, cache and app-data folders, settings
+│   ├── picker.py               native "choose file / folder" dialogs
+│   ├── youtube_auth.py         Google sign-in (OAuth 2.0 + PKCE), read-only YouTube access
+│   ├── youtube_api.py          reads the signed-in user's playlists (YouTube Data API v3)
+│   ├── net.py                  HTTPS helper for the Google APIs (system certificates)
 │   ├── web/ui.html             the interface
 │   └── assets/                 app icon (SVG source, PNG, ICNS)
+├── docs/                       guides (Google Cloud setup)
 ├── scripts/                    macOS app builder and launcher
 ├── examples/                   sample CSVs in the Takeout format
 └── tests/                      automated tests (pytest)

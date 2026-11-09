@@ -16,6 +16,8 @@ if [ ! -x "$PROJECT/.venv/bin/python" ]; then
 fi
 "$PROJECT/.venv/bin/pip" install -q --disable-pip-version-check -e "$PROJECT[app]"
 
+VERSION="$(PYTHONPATH="$PROJECT/src" "$PROJECT/.venv/bin/python" -c 'import infinifind_music; print(infinifind_music.__version__)')"
+
 mkdir -p "$DEST"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
@@ -29,8 +31,8 @@ cat > "$APP/Contents/Info.plist" <<EOF
   <key>CFBundleName</key><string>InfiniFind Music</string>
   <key>CFBundleDisplayName</key><string>InfiniFind Music</string>
   <key>CFBundleIdentifier</key><string>local.infinifindmusic.app</string>
-  <key>CFBundleVersion</key><string>1.0</string>
-  <key>CFBundleShortVersionString</key><string>1.0</string>
+  <key>CFBundleVersion</key><string>$VERSION</string>
+  <key>CFBundleShortVersionString</key><string>$VERSION</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleExecutable</key><string>InfiniFindMusic</string>
   <key>CFBundleIconFile</key><string>icon</string>

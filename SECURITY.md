@@ -34,11 +34,27 @@ The automated tests in `tests/test_server.py` check most of these.
   `Referrer-Policy: no-referrer` and `Cache-Control: no-store` (the HTML carries the token).
 - POST requests need `Content-Type: application/json` and an `Origin` matching the host, which
   blocks CSRF and DNS rebinding. Request bodies are limited to 64 KB.
-- Output names are reduced to a `basename`, so nothing is written outside Downloads.
-  `/api/open` only opens files whose `realpath` is inside `~/Downloads`.
+- **Allowed folders:** results are written only to Downloads or to the output folder the user
+  picked in the native folder dialog (`/api/pick`, stored in `settings.json`). A folder that only
+  arrives in a request is never accepted. Output names are reduced to a `basename`.
+  `/api/open` only opens files whose `realpath` is inside an allowed folder.
+- **File dialogs** (`picker.py`): the desktop app uses pywebview's dialog; the browser version
+  uses AppleScript on macOS or tkinter in a separate process elsewhere. The prompt and start
+  folder are passed as arguments, never pasted into the script.
 - Subprocesses get an argument list and never `shell=True` (`os.startfile` on Windows).
 - Generated HTML uses `html.escape`, and the interface uses `textContent` (no `innerHTML` with data).
 - External links use `rel="noopener noreferrer"`.
+- **Google sign-in** (`youtube_auth.py`): OAuth 2.0 for desktop apps. The consent page opens in
+  the user's browser and returns to `http://127.0.0.1:<port>/oauth/callback`. PKCE (S256) and a
+  one-time `state` (valid 10 minutes) protect the flow; the callback is the only route that works
+  without the interface token, and it does nothing without a matching `state`. Only the
+  `youtube.readonly` scope is requested, and a grant without it is rejected.
+- **Tokens** never leave the server process: `/api/account` returns only the channel name and
+  flags, never tokens. Token requests go through `net.py` (urllib with the system CA bundle), never
+  through `curl`, so tokens don't appear on command lines. The refresh token is stored with
+  `keyring` (system keychain) or not at all; sign-out revokes it at Google and deletes it.
+- The OAuth client file is validated (`*.apps.googleusercontent.com`) and saved with mode 0600.
+  For desktop apps Google treats the client secret as not confidential; security relies on PKCE.
 - `curl` is called by its full system path (`paths.curl_path()`), only with `https://` URLs
   (`--proto =https`), and `urlopen` only receives `https://` URLs.
 
@@ -65,4 +81,6 @@ app bundles a copy of the Python executable.
 - The macOS `.app` is ad-hoc signed and has no hardened runtime (it is not notarized).
 - The search cache (in the system cache folder, see `paths.py`) and the log are stored in plain
   text on the user's computer.
-- The availability check reads public YouTube pages, a grey area of YouTube's terms.
+- Without Google sign-in, the availability check reads public YouTube pages, a grey area of
+  YouTube's terms. When signed in, it uses the official YouTube Data API (`videos.list`) instead,
+  and falls back to the pages only if the API can't be used (quota, network, expired sign-in).
