@@ -25,3 +25,7 @@ CLAUDE.local.md
 
 # OS
 .DS_Store
+
+# Google OAuth client files (never commit; the app keeps its copy in the app-data folder)
+google_client.json
+client_secret*.json
