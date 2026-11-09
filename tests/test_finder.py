@@ -45,7 +45,7 @@ def test_store_search_uses_main_artist_only():
     links = finder.search_links(song, "en-US")
     assert links["Bandcamp"] == "https://bandcamp.com/search?q=Band%20Track"
     # The video link comes from the ID, never from the title.
-    assert links["YouTube Music"] == "https://music.youtube.com/watch?v=abcdefghijk"
+    assert finder.youtube_links(song, "en-US")["YouTube Music"] == "https://music.youtube.com/watch?v=abcdefghijk"
 
 
 def test_detect_columns_in_three_languages():
@@ -81,9 +81,44 @@ def test_command_line_youtube_only(tmp_path):
     out = tmp_path / "links.html"
     result = subprocess.run(
         [sys.executable, "-m", "infinifind_music.finder", os.path.join(EXAMPLES, "library_example.csv"),
-         "--youtube-only", "--exclude-artists", "Rick Astley", "--lang", "es", "--output", str(out)],
+         "--youtube-only", "--skip-availability", "--exclude-artists", "Rick Astley", "--lang", "es",
+         "--output", str(out)],
         capture_output=True, text=True, env=env, check=True)
     assert "1 canciones eliminadas" in result.stdout
     lines = (tmp_path / "links.txt").read_text(encoding="utf-8").splitlines()
     assert len(lines) == 1 and "Garota de Ipanema" in lines[0]
     assert '<html lang="es">' in out.read_text(encoding="utf-8")
+
+
+def sample_songs():
+    return [
+        {"title": "Plays", "artist": "A", "album": "", "id": "aaaaaaaaaaa", "availability": "OK",
+         "itunes": {"track": "Plays", "artist": "A", "album": "X", "price": 1.29, "currency": "USD",
+                    "link": "https://music.apple.com/x"}},
+        {"title": "Blocked", "artist": "B", "album": "", "id": "bbbbbbbbbbb", "availability": "UNPLAYABLE",
+         "itunes": None},
+    ]
+
+
+def test_complete_page_has_youtube_itunes_and_stores(tmp_path):
+    out = tmp_path / "page.html"
+    finder.build_html(sample_songs(), str(out), "x.csv", "en-US")
+    html = out.read_text(encoding="utf-8")
+    assert "<th>YouTube</th><th>iTunes Store</th><th>Search on</th>" in html
+    assert "watch?v=aaaaaaaaaaa" in html and "music.apple.com/x" in html and "bandcamp.com/search" in html
+    assert "unavailable in your region" in html and "1 unavailable on YouTube" in html
+
+
+def test_youtube_only_page_has_only_the_youtube_column(tmp_path):
+    out = tmp_path / "page.html"
+    finder.build_html(sample_songs(), str(out), "x.csv", "en-US", youtube_only=True)
+    html = out.read_text(encoding="utf-8")
+    assert "<th>YouTube</th></tr>" in html and "iTunes Store" not in html and "bandcamp" not in html
+
+
+def test_unavailable_videos_go_to_a_separate_list(tmp_path):
+    written = finder.write_link_lists(sample_songs(), str(tmp_path / "out.html"), "en-US")
+    assert [os.path.basename(p) for p in written] == ["out.txt", "out_unavailable.txt"]
+    assert "aaaaaaaaaaa" in (tmp_path / "out.txt").read_text(encoding="utf-8")
+    assert "bbbbbbbbbbb" not in (tmp_path / "out.txt").read_text(encoding="utf-8")
+    assert "bbbbbbbbbbb" in (tmp_path / "out_unavailable.txt").read_text(encoding="utf-8")

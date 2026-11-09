@@ -33,10 +33,13 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from . import i18n, paths
+from . import availability, i18n, paths
 
 USER_AGENT = "infinifind-music/1.0"
 ITUNES_PAUSE = 3.1  # the iTunes Search API allows ~20 requests per minute
+CHECK_PAUSE = 1.0  # pause between YouTube availability checks when iTunes is not queried
+AVAILABILITY_CACHE_HOURS = 24  # availability can change, so cached results expire
+CACHE_MAX_DAYS = 30  # the whole cache file is discarded after this
 # When run by the app, extra machine-readable lines tell it which files were created.
 MACHINE = os.environ.get("INFINIFIND_MACHINE") == "1"
 
@@ -55,10 +58,15 @@ def normalize(text):
 def detect_columns(header):
     """Finds the title, artist, album and video ID columns.
     Works with English, Portuguese and Spanish headers."""
-    cols = {"title": None, "artists": [], "album": None, "id": None}
+    cols = {"title": None, "artists": [], "album": None, "id": None, "playlist": None, "availability": None}
     for name in header:
         n = normalize(name)
-        if "video" in n and "id" in n and cols["id"] is None:
+        # Extra columns written by the app when it reads playlists from the user's account.
+        if n == "playlist" and cols["playlist"] is None:
+            cols["playlist"] = name
+        elif n == "availability" and cols["availability"] is None:
+            cols["availability"] = name
+        elif "video" in n and "id" in n and cols["id"] is None:
             cols["id"] = name
         elif "album" in n and cols["album"] is None:
             cols["album"] = name
@@ -90,6 +98,10 @@ def read_csv(path):
                 "album": (row.get(cols["album"]) or "").strip() if cols["album"] else "",
                 "id": (row.get(cols["id"]) or "").strip() if cols["id"] else "",
             })
+            if cols["playlist"] and (row.get(cols["playlist"]) or "").strip():
+                songs[-1]["playlist"] = row[cols["playlist"]].strip()
+            if cols["availability"] and (row.get(cols["availability"]) or "").strip():
+                songs[-1]["availability"] = row[cols["availability"]].strip()
     return cols, [s for s in songs if s["title"] or s["id"]]
 
 
@@ -260,68 +272,90 @@ def youtube_links(song, lang):
     return {i18n.t(lang, "search_ytm"): f"https://music.youtube.com/search?q={q}"}
 
 
-def search_links(song, lang, youtube_only=False):
-    if youtube_only:
-        return youtube_links(song, lang)
+def search_links(song, lang):
+    """Search buttons for the stores (the YouTube links have their own column)."""
     q = urllib.parse.quote(search_term(song))
-    links = {
+    return {
         # No item_type filter: Bandcamp then also shows artist pages and albums.
         "Bandcamp": f"https://bandcamp.com/search?q={q}",
         "Amazon Music": f"https://{i18n.AMAZON[lang]}/search/{q}",
         "Deezer": f"https://www.deezer.com/search/{q}",
         "Spotify": f"https://open.spotify.com/search/{q}",
     }
-    if song["id"]:
-        links["YouTube Music"] = f"https://music.youtube.com/watch?v={song['id']}"
-    return links
 
 
-def build_html(songs, output_path, source, lang, youtube_only=False):
+def is_unavailable(song):
+    return song.get("availability") in availability.UNAVAILABLE
+
+
+def build_html(songs, output_path, source, lang, youtube_only=False, stores=True):
+    """Page with one row per song: YouTube links (+ availability), iTunes match and store buttons.
+    youtube_only=True keeps only the YouTube column; stores=False hides the store columns."""
     e = html.escape
     t = lambda key, **kw: e(i18n.t(lang, key, **kw))  # noqa: E731
     link = 'target="_blank" rel="noopener noreferrer"'
+    show_itunes = not youtube_only and any("itunes" in s for s in songs)
+    show_stores = not youtube_only and stores
     rows = []
-    found = 0
+    found = unavailable = 0
     for i, s in enumerate(songs, 1):
-        it = s.get("itunes")
-        if it:
-            found += 1
-            price = ""
-            if it["price"] is not None and it["price"] >= 0:
-                price = " — " + i18n.price(lang, it["currency"], it["price"])
-            itunes_cell = (f'<a href="{e(it["link"])}" {link}>{e(it["track"])}</a>'
-                           f'<br><small>{e(it["artist"])} · {e(it["album"])}{e(price)}</small>')
-        elif "itunes" in s:
-            itunes_cell = f'<span class="none">{t("not_found")}</span>'
-        else:
-            itunes_cell = '<span class="none">—</span>'
-        buttons = " ".join(f'<a class="btn" href="{e(u)}" {link}>{e(n)}</a>'
-                           for n, u in search_links(s, lang, youtube_only).items())
+        yt = " ".join(f'<a class="btn" href="{e(u)}" {link}>{e(n)}</a>'
+                      for n, u in youtube_links(s, lang).items())
+        if is_unavailable(s):
+            unavailable += 1
+            yt += f'<br><span class="bad">{t("unavailable")}</span>'
+        cells = f'<td class="links">{yt}</td>'
+        if show_itunes:
+            it = s.get("itunes")
+            if it:
+                found += 1
+                price = ""
+                if it["price"] is not None and it["price"] >= 0:
+                    price = " — " + i18n.price(lang, it["currency"], it["price"])
+                cells += (f'<td><a href="{e(it["link"])}" {link}>{e(it["track"])}</a>'
+                          f'<br><small>{e(it["artist"])} · {e(it["album"])}{e(price)}</small></td>')
+            elif "itunes" in s:
+                cells += f'<td><span class="none">{t("not_found")}</span></td>'
+            else:
+                cells += '<td><span class="none">—</span></td>'
+        if show_stores:
+            buttons = " ".join(f'<a class="btn" href="{e(u)}" {link}>{e(n)}</a>'
+                               for n, u in search_links(s, lang).items())
+            cells += f'<td class="links">{buttons}</td>'
+        row_class = ' class="off"' if is_unavailable(s) else ""
         rows.append(
-            f'<tr><td class="n">{i}</td>'
+            f'<tr{row_class}><td class="n">{i}</td>'
             f'<td><strong>{e(s["title"]) or t("no_title")}</strong><br>'
-            f'<small>{e(s["artist"])}{" · " + e(s["album"]) if s["album"] else ""}</small></td>'
-            + ("" if youtube_only else f'<td>{itunes_cell}</td>')
-            + f'<td class="links">{buttons}</td></tr>')
+            f'<small>{e(s["artist"])}{" · " + e(s["album"]) if s["album"] else ""}</small>'
+            + (f'<br><small class="pl">▸ {e(s["playlist"])}</small>' if s.get("playlist") else "")
+            + "</td>"
+            f"{cells}</tr>")
 
     summary = t("songs", n=len(songs))
-    if any("itunes" in s for s in songs):
+    if show_itunes:
         summary += " · " + t("found_itunes", n=found)
+    if any("availability" in s for s in songs):
+        summary += " · " + t("unavailable_count", n=unavailable)
     summary += " · " + t("source", name=os.path.basename(source))
-    extra_header = (f"<th>{t('col_link')}</th>" if youtube_only
-                    else f"<th>{t('col_itunes')}</th><th>{t('col_search')}</th>")
+    header = f"<th>{t('col_youtube')}</th>"
+    if show_itunes:
+        header += f"<th>{t('col_itunes')}</th>"
+    if show_stores:
+        header += f"<th>{t('col_search')}</th>"
 
     page = f"""<!doctype html>
 <html lang="{lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{t("page_title")}</title>
 <style>
-:root {{ --bg:#fafafa; --fg:#1d1d1f; --mut:#6e6e73; --line:#e5e5ea; --btn:#ececf0; --link:#0060df; }}
+:root {{ --bg:#fafafa; --fg:#1d1d1f; --mut:#6e6e73; --line:#e5e5ea; --btn:#ececf0; --link:#0060df;
+        --bad:#c4291c; }}
 @media (prefers-color-scheme: dark) {{
-  :root {{ --bg:#1c1c1e; --fg:#f2f2f7; --mut:#a1a1a6; --line:#3a3a3c; --btn:#2c2c2e; --link:#6aa8ff; }} }}
+  :root {{ --bg:#1c1c1e; --fg:#f2f2f7; --mut:#a1a1a6; --line:#3a3a3c; --btn:#2c2c2e; --link:#6aa8ff;
+          --bad:#ff7b6e; }} }}
 body {{ font-family: system-ui, sans-serif; background:var(--bg); color:var(--fg);
        margin:0; padding:24px 16px; }}
-main {{ max-width:1100px; margin:auto; }}
+main {{ max-width:1200px; margin:auto; }}
 h1 {{ margin:0 0 4px; font-size:1.5rem; }}
 p.summary {{ color:var(--mut); margin:0 0 16px; }}
 input {{ width:100%; max-width:360px; padding:8px 10px; font-size:1rem; border:1px solid var(--line);
@@ -335,13 +369,16 @@ small, .n, .none {{ color:var(--mut); }}
 a {{ color:var(--link); }}
 .btn {{ display:inline-block; background:var(--btn); color:var(--fg); text-decoration:none;
        padding:3px 8px; border-radius:6px; font-size:.8rem; margin:2px 0; }}
-.links {{ min-width:220px; }}
+.links {{ min-width:180px; }}
+.bad {{ color:var(--bad); font-size:.8rem; font-weight:600; }}
+.pl {{ font-size:.75rem; }}
+tr.off strong {{ text-decoration: line-through; text-decoration-color: var(--bad); }}
 </style></head><body><main>
 <h1>{t("page_title")}</h1>
 <p class="summary">{summary}</p>
 <input id="filter" placeholder="{t("filter")}" oninput="filterRows(this.value)">
 <div class="table"><table>
-<thead><tr><th>#</th><th>{t("col_song")}</th>{extra_header}</tr></thead>
+<thead><tr><th>#</th><th>{t("col_song")}</th>{header}</tr></thead>
 <tbody>{''.join(rows)}</tbody></table></div>
 </main>
 <script>
@@ -356,18 +393,53 @@ function filterRows(text) {{
         f.write(page)
 
 
+def write_link_lists(songs, output, lang):
+    """Writes <output>.txt with the playable YouTube links and, when availability was checked,
+    <output>_unavailable.txt with the others. Returns the paths written."""
+    base = os.path.splitext(output)[0]
+    written = []
+
+    def line(s):
+        name = " – ".join(x for x in (s["artist"], s["title"]) if x)
+        return f"{name}: {next(iter(youtube_links(s, lang).values()))}\n"
+
+    with open(base + ".txt", "w", encoding="utf-8") as f:
+        f.writelines(line(s) for s in songs if not is_unavailable(s))
+    written.append(base + ".txt")
+    if any("availability" in s for s in songs):
+        with open(base + "_unavailable.txt", "w", encoding="utf-8") as f:
+            f.writelines(line(s) for s in songs if is_unavailable(s))
+        written.append(base + "_unavailable.txt")
+    return written
+
+
+def cached_availability(cache, video_id, lang):
+    key = "av:" + video_id
+    hit = cache.get(key)
+    if isinstance(hit, list) and len(hit) == 2 and time.time() - hit[1] < AVAILABILITY_CACHE_HOURS * 3600:
+        return hit[0], True
+    status, _reason = availability.video_status(video_id, lang)
+    if status not in ("LOOKUP_FAILED", "NO_ID"):
+        cache[key] = [status, time.time()]
+    return status, False
+
+
 def main():
     p = argparse.ArgumentParser(description="Find where to buy or stream the songs in a Google Takeout CSV.")
     p.add_argument("csv", help=".csv file exported by Google Takeout")
     p.add_argument("--output", default="my_songs.html",
                    help="HTML file to create; without a folder it is saved in ~/Downloads "
-                        "(default: my_songs.html)")
+                        "(default: my_songs.html). A .txt list of YouTube links is written next to it.")
     p.add_argument("--lang", default=i18n.DEFAULT, help="language: en-US (default), pt-BR or es")
+    p.add_argument("--source-name", default=None,
+                   help="name shown as the source (default: the CSV file name)")
     p.add_argument("--country", default=None,
                    help="iTunes Store country (default depends on --lang: US, BR or ES)")
-    p.add_argument("--no-itunes", action="store_true", help="do not query iTunes, only build search links")
-    p.add_argument("--youtube-only", action="store_true",
-                   help="only YouTube/YouTube Music links (fast, no store lookups); also writes a .txt list")
+    p.add_argument("--no-itunes", action="store_true",
+                   help="do not query iTunes (fast): YouTube links + store search buttons")
+    p.add_argument("--youtube-only", action="store_true", help="only YouTube/YouTube Music links (fast)")
+    p.add_argument("--skip-availability", action="store_true",
+                   help="do not check which videos still play in your region (saves ~1 s per song)")
     p.add_argument("--exclude-artists", default="",
                    help='artists to leave out, comma-separated (e.g. "Artist A,Artist B")')
     args = p.parse_args()
@@ -375,6 +447,7 @@ def main():
     country = (args.country or i18n.COUNTRY[lang]).upper()
     if args.youtube_only:
         args.no_itunes = True
+    check = not args.skip_availability
     if not os.path.dirname(args.output):  # no folder in the name: save to Downloads
         args.output = os.path.join(paths.DOWNLOADS, args.output)
 
@@ -384,7 +457,8 @@ def main():
     cols, songs = read_csv(args.csv)
     if not songs:
         sys.exit(i18n.t(lang, "no_songs", columns=json.dumps(cols, ensure_ascii=False)))
-    print(i18n.t(lang, "songs_read", n=len(songs), path=args.csv), flush=True)
+    source_name = args.source_name or args.csv
+    print(i18n.t(lang, "songs_read", n=len(songs), path=source_name), flush=True)
     if args.exclude_artists:
         excluded = [normalize(a) for a in args.exclude_artists.split(",") if a.strip()]
         before = len(songs)
@@ -397,50 +471,64 @@ def main():
     if os.path.exists(cache_path):
         with open(cache_path, encoding="utf-8") as f:
             cache = json.load(f)
+    # YouTube's developer policies: don't keep API-derived data for more than 30 days.
+    if not isinstance(cache, dict) or time.time() - cache.get("_created", 0) > CACHE_MAX_DAYS * 86400:
+        cache = {"_created": time.time()}
+
+    def save_cache():
+        with open(cache_path, "w", encoding="utf-8") as f:
+            json.dump(cache, f, ensure_ascii=False)
 
     untitled = [s for s in songs if not s["title"] and s["id"]]
     if untitled:
         print(i18n.t(lang, "fetching_titles", n=len(untitled)), flush=True)
         for s in untitled:
-            key = "yt:" + s["id"]
+            key = "yt2:" + s["id"]  # v2: cleaned with clean_youtube_title()
             if key in cache:
-                s["title"], s["artist"] = cache[key]
+                s.update(cache[key])
             else:
                 fill_from_youtube(s)
-                cache[key] = [s["title"], s["artist"]]
+                cache[key] = {k: s[k] for k in ("title", "artist", "album")}
 
     try:
-        if not args.no_itunes:
+        if check or not args.no_itunes:
+            if check:
+                print(i18n.t(lang, "checking"), flush=True)
             total = len(songs)
             for i, s in enumerate(songs, 1):
-                key = f'it:{country}:{s["artist"]}|{s["title"]}'
-                if key in cache:
-                    s["itunes"] = cache[key]
-                    continue
-                print(f"[{i}/{total}] {s['artist']} – {s['title']}", flush=True)
-                s["itunes"] = search_itunes(s, country, lang)
-                cache[key] = s["itunes"]
-                with open(cache_path, "w", encoding="utf-8") as f:
-                    json.dump(cache, f, ensure_ascii=False)
-                time.sleep(ITUNES_PAUSE)
+                waited = False
+                notes = []
+                if not args.no_itunes:
+                    key = f'it:{country}:{search_term(s)}'
+                    if key in cache:
+                        s["itunes"] = cache[key]
+                    else:
+                        s["itunes"] = search_itunes(s, country, lang)
+                        cache[key] = s["itunes"]
+                        waited = True
+                if check and s["id"] and "availability" not in s:  # status from the API is kept
+                    s["availability"], from_cache = cached_availability(cache, s["id"], lang)
+                    if s["availability"] in availability.UNAVAILABLE:
+                        notes.append(i18n.t(lang, "unavailable"))
+                    waited = waited or not from_cache
+                note = f" ({', '.join(notes)})" if notes else ""
+                print(f"[{i}/{total}] {s['artist']} – {s['title']}{note}", flush=True)
+                if waited:
+                    save_cache()
+                    # iTunes allows ~20 requests/min; the availability check fits inside that pause.
+                    time.sleep(ITUNES_PAUSE if not args.no_itunes else CHECK_PAUSE)
     except KeyboardInterrupt:
         print(i18n.t(lang, "interrupted"), flush=True)
 
-    with open(cache_path, "w", encoding="utf-8") as f:
-        json.dump(cache, f, ensure_ascii=False)
-    build_html(songs, args.output, args.csv, lang, args.youtube_only)
+    save_cache()
+    build_html(songs, args.output, source_name, lang, youtube_only=args.youtube_only)
     output = os.path.abspath(args.output)
     print(i18n.t(lang, "done", path=output), flush=True)
     report_file(output)
-    if args.youtube_only:
-        # Plain list, easy to copy and paste.
-        txt = os.path.splitext(output)[0] + ".txt"
-        with open(txt, "w", encoding="utf-8") as f:
-            for s in songs:
-                name = " – ".join(x for x in (s["artist"], s["title"]) if x)
-                f.write(f"{name}: {next(iter(youtube_links(s, lang).values()))}\n")
-        print(i18n.t(lang, "text_list", path=txt), flush=True)
-        report_file(txt)
+    for path in write_link_lists(songs, output, lang):
+        key = "unavailable_list" if path.endswith("_unavailable.txt") else "text_list"
+        print(i18n.t(lang, key, path=path), flush=True)
+        report_file(path)
 
 
 if __name__ == "__main__":
