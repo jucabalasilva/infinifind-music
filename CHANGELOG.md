@@ -54,5 +54,5 @@ First public release: reads the Google Takeout CSV, builds pages with YouTube Mu
 Store matches and store search buttons, checks which videos still play, Frutiger Aero desktop app
 in English, Portuguese (Brazil) and Spanish.
 
-[2.0.0]: https://github.com/jucabalasilva/infinifind-music/compare/v1.0.0...v2
+[2.0.0]: https://github.com/jucabalasilva/infinifind-music/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/jucabalasilva/infinifind-music/releases/tag/v1.0.0

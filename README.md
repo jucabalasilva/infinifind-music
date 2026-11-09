@@ -5,8 +5,9 @@
 <h1 align="center">InfiniFind Music</h1>
 
 <p align="center">
-  Organize the library you exported from YouTube Music: list your songs, find where to buy or
-  stream them legally, and keep a clean list of links.<br>
+  Bring your YouTube Music playlists anywhere: read them straight from your YouTube account (or
+  from a Google Takeout export), find where to buy or stream each song legally, and keep a clean
+  list of links.<br>
   Includes a <b>Frutiger Aero</b>-style desktop app with light and dark themes, in
   English, Portuguese (Brazil) and Spanish.
 </p>
@@ -15,42 +16,80 @@
 
 ## Features
 
-- **Reads the Google Takeout CSV** (YouTube Music library or playlists), with headers in English,
-  Portuguese or Spanish.
+- **Reads your playlists straight from your YouTube account**: sign in with Google (read-only
+  access), see all your playlists and your liked videos with their number of videos, tick the
+  ones you want or **select all**.
+- **Also reads Google Takeout exports** (your YouTube Music library or playlists), with headers in
+  English, Portuguese or Spanish.
 - **Builds one complete page** (the default): for each song, its YouTube and YouTube Music
   links, the iTunes Store match with link and price, and search buttons for Bandcamp, Amazon
   Music, Deezer and Spotify. Faster modes skip iTunes or keep only the YouTube links.
+- **One page for everything or one file per playlist**, each song labelled with its playlist;
+  a video that is in several playlists appears once.
 - **Writes a `.txt` list of YouTube Music links**, optionally leaving some artists out.
 - **Checks which videos still play in your region** while it builds the page (on by default):
-  unavailable ones are marked on the page and moved to a separate `_unavailable.txt` list. An
-  older `.txt` list can still be checked from the command line with `infinifind-check`.
-- **Desktop app** with its own window, light/dark theme, language picker (English is the
-  default) and a progress bar. It also runs in the browser or from the command line.
-- **Choose your files and folders**: pick the Takeout CSV anywhere on your
-  computer, and choose the folder where results are saved (Downloads by default).
+  unavailable ones are marked on the page and moved to a separate `_unavailable.txt` list. When
+  you are signed in, the check uses the official YouTube Data API (50 videos per request).
+- **Suggests file names** from what you selected, always command-line friendly
+  (`animes_e_games.html`, `mpb_rock.html`).
+- **Lets you choose your files and folders**: the Takeout CSV anywhere on your computer and the
+  folder where results are saved (Downloads by default, remembered).
+- **Desktop app** with its own window, an animated day/night scenery, light/dark theme, language
+  picker (English is the default), a selection summary with an estimated time and a progress
+  bar. It also runs in the browser or from the command line.
 
-Everything runs on your computer: no account, no API key and no data collection.
+Everything runs on your computer: the project has no server of its own and collects no data. The
+Google account is optional; without it you can still use Takeout exports.
 
 ## Requirements
 
 - **Python 3.9 or newer.** The core tools use only the standard library.
-- For the **desktop window**: [pywebview](https://pywebview.flowrl.com/), installed with the
-  `app` extra (see below).
+- For the **desktop window**: [pywebview](https://pywebview.flowrl.com/), and
+  [keyring](https://pypi.org/project/keyring/) to remember your Google sign-in, both installed with
+  the `app` extra (see [Installation](#installation)).
 - `curl`, used when Python has no HTTPS certificates (common with the python.org installer on macOS).
+- Optional: a Google account to read your playlists directly (see below).
 
 Tested on **macOS**. The command-line tools and the browser version should work on Linux and
 Windows; the `.app` builder is macOS-only.
 
-## Exporting your data with Google Takeout
+## Getting your songs in
 
-InfiniFind Music works with the CSV files that Google Takeout creates for YouTube Music. You
-can export your **library** (the songs you added or liked), your **playlists**, or both, in a
+There are two ways, and you can use both:
+
+| | Your YouTube account | Google Takeout export |
+|---|---|---|
+| **Playlists** (yours and liked videos) | ✅ directly, always up to date | ✅ one CSV per playlist |
+| **YouTube Music library** (songs/albums you added) | ❌ not available in the YouTube API | ✅ `music library songs.csv` |
+| **Setup** | sign in once (needs a Google Cloud client ID for now) | request an export, wait for the email |
+
+### Option 1: sign in with your YouTube account
+
+The app asks Google only for **read-only** access (`youtube.readonly`): it can read your channel
+name and your playlists, and can never change anything.
+
+1. **Set up Google access (once).** For now you need your own Google Cloud client ID (free, about
+   15 minutes): follow [docs/google-cloud-setup.md](docs/google-cloud-setup.md), then click
+   **Set up Google access…** in the app and choose the downloaded `.json` file. Released builds
+   will ship a client ID verified by Google, so regular users won't need this step.
+2. **Sign in.** Click **Sign in with Google**. The sign-in opens in your own browser (Google blocks
+   sign-in inside app windows) and comes back to the app automatically. You stay signed in on this
+   computer; **Sign out** revokes the access at Google.
+3. **Choose playlists.** Select **Source → My YouTube account**. Your playlists and liked videos
+   are listed with their number of videos: tick the ones you want, or **Select all**. Below the
+   list, the app shows how many videos are selected and roughly how long it will take (a big
+   liked-videos list can have thousands).
+4. Tick **One file per playlist** if you want a separate page and list for each one; otherwise
+   you get one page with a **Playlist** label on each song. Deleted and private videos are listed
+   as unavailable.
+
+### Option 2: export with Google Takeout
+
+You can export your **library** (the songs you added or liked), your **playlists**, or both, in a
 single export.
 
 > The labels below are from the English version of Takeout. Your Takeout may use your
 > account's language, and the names may change slightly over time.
-
-### Step by step
 
 1. Go to [takeout.google.com](https://takeout.google.com) and sign in with the Google account you
    use on YouTube Music.
@@ -74,7 +113,7 @@ single export.
 8. Download the `.zip` and extract it into your **Downloads** folder, so you end up with a
    `Downloads/Takeout` folder.
 
-### Where the files end up
+The files end up like this:
 
 ```
 Downloads/Takeout/YouTube and YouTube Music/
@@ -89,53 +128,42 @@ Downloads/Takeout/YouTube and YouTube Music/
 Folder and file names follow your account's language. In Portuguese, for example, they are
 `YouTube e YouTube Music/` and `Vídeos da playlist <name>.csv`. The app finds them either way.
 
-### Using a playlist
+In the app, select **Source → Google Takeout file**: the files in `Downloads/Takeout` show up in
+the **CSV file** list; if your Takeout folder is somewhere else, click **Choose…**. On the command
+line:
 
-- **In the app:** playlists in `Downloads/Takeout` show up in the **CSV file** list. If your
-  Takeout folder is somewhere else, click **Choose…** next to the list and select the CSV.
-  Then choose what to build and click **Start**.
-- **On the command line:**
+```bash
+infinifind-find ~/Downloads/Takeout/"YouTube and YouTube Music/playlists/Road trip videos.csv" --youtube-only
+```
 
-  ```bash
-  infinifind-find ~/Downloads/Takeout/"YouTube and YouTube Music/playlists/Road trip videos.csv" --youtube-only
-  ```
+Playlist files only contain the **video ID** of each song, without title or artist. The app gets
+each title from YouTube: through the official API when you are signed in (50 videos per request),
+otherwise one quick request per song. The results are cached for the next runs.
 
-Playlist files only contain the **video ID** of each song, without title or artist. InfiniFind
-Music looks up each title on YouTube (one quick request per song), so you need an internet
-connection the first time. The results are cached for the next runs.
+**What Takeout does not export:** the audio of catalog songs (only lists). Songs downloaded in
+the YouTube Music phone app are encrypted and only play inside that app; the only audio files you
+get are the ones you uploaded yourself (`music-uploads`).
 
-### What Takeout does not export
+## Using the app
 
-- It never exports the audio of catalog songs, only lists. Songs downloaded in the YouTube Music
-  phone app are encrypted and only play inside that app.
-- The only audio files you get are the ones you uploaded yourself (`music-uploads`).
-
-## Signing in with YouTube (preview)
-
-Instead of exporting with Takeout, you can sign in with your Google account and let the app read
-your playlists directly. The app asks Google only for **read-only** access
-(`youtube.readonly`): it can read your channel name and playlists, and can never change anything.
-
-- Sign-in happens in your own browser (Google blocks sign-in inside app windows) and comes back to
-  the app automatically. **Sign out** revokes the access at Google.
-- For now you need your own Google Cloud client ID (free, about 15 minutes): follow
-  [docs/google-cloud-setup.md](docs/google-cloud-setup.md). Released builds will ship a client ID
-  verified by Google, so regular users won't need this step.
-- The YouTube API doesn't expose the YouTube Music *library* (songs and albums you added) or
-  *Watch later*; use the Takeout export for those.
-
-Once signed in, choose **Source → My YouTube account** in the app. Your playlists (and your
-liked videos) are listed with their number of videos: tick the ones you want, or **Select all**.
-Below the list, the app shows how many videos are selected and roughly how long it will take
-(a big liked-videos list can have thousands), then click **Start**. By default you get one page with a **Playlist** label on each song (a video
-that is in several playlists appears once); tick **One file per playlist** to get a separate page
-and list for each one. Deleted and private videos are listed as unavailable.
-
-**File names** are suggested from what you selected: the playlist name (`animes_e_games.html`),
-up to three names joined (`mpb_rock.html`), "and N more" or "all playlists", or the Takeout file
-name (`Vídeos da playlist Aberturas.csv` → `aberturas.html`). They are always command-line friendly:
-lowercase letters, digits and `_` only, without spaces, accents or symbols. A name you type is
-kept (and normalized the same way: "Minhas Músicas" → `minhas_musicas.html`).
+1. **Source:** your YouTube account (choose playlists) or a Google Takeout file (choose a CSV).
+2. **What to build:**
+   - **Complete** (default): YouTube links, iTunes Store match (link and price) and search buttons
+     for other stores. About 3 s per song, because of iTunes' rate limit.
+   - **YouTube links only**: fast; the page and the `.txt` list.
+   - **YouTube + store buttons**: fast; without iTunes prices.
+3. **Check which videos still play** (on by default): unavailable videos are marked and moved to a
+   separate list. Almost instant when signed in; otherwise about 1 s per song in the fast modes.
+4. **Leave out these artists** (optional), comma-separated.
+5. **File name:** suggested from what you selected — the playlist name (`animes_e_games.html`), up
+   to three names joined (`mpb_rock.html`), "and N more", "all playlists", or the Takeout file name
+   (`Vídeos da playlist Aberturas.csv` → `aberturas.html`). Names are always command-line friendly:
+   lowercase letters, digits and `_` only. A name you type is kept and normalized the same way
+   ("Minhas Músicas" → `minhas_musicas.html`).
+6. **Save to:** Downloads by default; **Change…** picks another folder (remembered) and
+   **Use Downloads** goes back.
+7. Click **Start**, follow the progress, then use the **Open** buttons to see the page and lists.
+   The app asks before overwriting existing files.
 
 ## Installation
 
@@ -188,7 +216,7 @@ link printed in the terminal.
 |---|---|
 | `infinifind` | Opens the desktop app (or the browser version without pywebview). |
 | `infinifind-web` | Opens the interface in your browser. |
-| `infinifind-find` | Reads a Takeout CSV and builds the page, the link list and the unavailable list. |
+| `infinifind-find` | Reads a Takeout CSV and builds the page, the link list and the unavailable list. (Reading playlists from your account is done in the app.) |
 | `infinifind-check` | Command line only: removes links that no longer play from an older `.txt` list. |
 
 Each one also runs as a module, without installing: for example
@@ -231,8 +259,8 @@ The interface, the generated pages and the command-line messages are available i
 | 🇧🇷 Portuguese (Brazil) | `pt-BR` |
 | 🇪🇸 Spanish | `es` |
 
-In the app, use the language menu at the top (🇺🇸 English, 🇧🇷 Português, 🇪🇸 Español). Your choice is remembered. On the command line, use
-`--lang`. Translations live in `src/infinifind_music/i18n.py` (command line and generated
+In the app, use the language menu at the top (🇺🇸 English, 🇧🇷 Português, 🇪🇸 Español). Your
+choice is remembered. On the command line, use `--lang`. Translations live in `src/infinifind_music/i18n.py` (command line and generated
 pages) and in the `STRINGS` object in `src/infinifind_music/web/ui.html` (interface). To add a
 language, add it to both.
 
@@ -288,7 +316,7 @@ infinifind-music/
 ├── src/infinifind_music/       the Python package
 │   ├── app.py                  desktop app (pywebview window)
 │   ├── server.py               local server behind the interface
-│   ├── finder.py               reads the Takeout CSV, builds pages and lists
+│   ├── finder.py               reads the songs (CSV), builds pages and lists
 │   ├── availability.py         checks which links still play
 │   ├── i18n.py                 translations (en-US, pt-BR, es)
 │   ├── paths.py                Downloads, cache and app-data folders, settings
@@ -303,6 +331,11 @@ infinifind-music/
 ├── examples/                   sample CSVs in the Takeout format
 └── tests/                      automated tests (pytest)
 ```
+
+## Changelog
+
+What changed in each version: [CHANGELOG.md](CHANGELOG.md) and the
+[releases](https://github.com/jucabalasilva/infinifind-music/releases).
 
 ## Contributing
 
