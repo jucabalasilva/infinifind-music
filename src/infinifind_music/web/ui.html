@@ -383,6 +383,7 @@ button.theme { background: linear-gradient(180deg, var(--panel-top), var(--panel
 .account .who b { display: block; font-size: 1.05rem; }
 .account .who small { color: var(--text-soft); }
 .account .buttons { margin-top: 0; }
+.legal { margin: 10px 0 0; font-size: 0.8rem; color: var(--text-soft); }
 .panel h2 { position: relative; margin: 0 0 4px; font-size: 1.25rem; font-weight: 600; display: flex; align-items: center; gap: 10px; }
 .panel h2 .num {
   width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: .9rem; color: #fff; flex: none;
@@ -646,6 +647,10 @@ footer { position: relative; z-index: 2; text-align: center; color: var(--footer
           <button type="button" class="gray small" id="btnSignOut" data-i18n="btn_sign_out" hidden>Sign out</button>
         </div>
       </div>
+      <p class="legal"><span data-i18n="account_legal">Use of YouTube data is subject to the</span>
+        <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener noreferrer" data-i18n="account_terms">YouTube Terms of Service</a>
+        <span data-i18n="account_and">and the</span>
+        <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" data-i18n="account_privacy">Google Privacy Policy</a>.</p>
     </section>
 
     <section class="panel wide">
@@ -836,6 +841,10 @@ const STRINGS = {
     account_signed_in: "Signed in as {name}",
     account_remembered: "You stay signed in on this computer.",
     account_session_only: "You will need to sign in again next time.",
+    account_legal: "Use of YouTube data is subject to the",
+    account_terms: "YouTube Terms of Service",
+    account_and: "and the",
+    account_privacy: "Google Privacy Policy",
     btn_configure: "Set up Google access…",
     btn_sign_in: "Sign in with Google",
     btn_sign_out: "Sign out",
@@ -934,6 +943,10 @@ const STRINGS = {
     account_signed_in: "Conectado como {name}",
     account_remembered: "Você continua conectado neste computador.",
     account_session_only: "Na próxima vez será preciso entrar de novo.",
+    account_legal: "O uso dos dados do YouTube está sujeito aos",
+    account_terms: "Termos de Serviço do YouTube",
+    account_and: "e à",
+    account_privacy: "Política de Privacidade do Google",
     btn_configure: "Configurar acesso ao Google…",
     btn_sign_in: "Entrar com o Google",
     btn_sign_out: "Sair",
@@ -1032,6 +1045,10 @@ const STRINGS = {
     account_signed_in: "Sesión iniciada como {name}",
     account_remembered: "Tu sesión se mantiene en este equipo.",
     account_session_only: "La próxima vez tendrás que iniciar sesión de nuevo.",
+    account_legal: "El uso de los datos de YouTube está sujeto a los",
+    account_terms: "Términos de Servicio de YouTube",
+    account_and: "y a la",
+    account_privacy: "Política de Privacidad de Google",
     btn_configure: "Configurar acceso a Google…",
     btn_sign_in: "Iniciar sesión con Google",
     btn_sign_out: "Cerrar sesión",

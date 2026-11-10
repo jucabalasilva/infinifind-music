@@ -282,6 +282,7 @@ language, add it to both.
   on macOS, `~/.cache/InfiniFindMusic` on Linux, `%LOCALAPPDATA%\InfiniFindMusic` on Windows),
   the macOS app log (`~/Library/Logs/InfiniFindMusic.log`), your theme and language choice, and
   the output folder you picked (`settings.json` in the app-data folder).
+- The account panel links to the YouTube Terms of Service and the Google Privacy Policy.
 - The `.gitignore` keeps results, caches and Takeout files from being pushed to GitHub by mistake.
 
 ## Security

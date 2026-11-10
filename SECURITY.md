@@ -79,8 +79,8 @@ app bundles a copy of the Python executable.
 ## Known limitations
 
 - The macOS `.app` is ad-hoc signed and has no hardened runtime (it is not notarized).
-- The search cache (in the system cache folder, see `paths.py`) and the log are stored in plain
-  text on the user's computer.
+- The search cache (in the system cache folder, see `paths.py`) and the macOS app launcher log
+  (`~/Library/Logs/InfiniFindMusic.log`) are stored in plain text on the user's computer.
 - Without Google sign-in, the availability check reads public YouTube pages, a grey area of
   YouTube's terms. When signed in, it uses the official YouTube Data API (`videos.list`) instead,
   and falls back to the pages only if the API can't be used (quota, network, expired sign-in).

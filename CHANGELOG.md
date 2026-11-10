@@ -4,6 +4,15 @@ All notable changes to InfiniFind Music. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- Links to the YouTube Terms of Service and the Google Privacy Policy under the account panel
+  (English, Portuguese and Spanish).
+
+### Fixed
+- SECURITY.md: the macOS app log is the only log file; the wording about stored data is more precise.
+
 ## [2.0.0] - 2026-11-09
 
 A big rework of the app: it can now read your playlists straight from your YouTube account.
